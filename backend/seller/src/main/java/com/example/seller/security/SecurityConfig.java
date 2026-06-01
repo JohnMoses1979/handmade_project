@@ -78,8 +78,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(HttpMethod.DELETE,
                     "/api/customer/addresses/**",
-                    "/api/customer/**"
-                    ,
+                    "/api/customer/**",
                     "/api/notifications/**"
                 ).permitAll()
                 .requestMatchers(
@@ -122,14 +121,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "http://192.168.*:*",
-            "http://10.*:*"
-        ));
+        config.setAllowedOriginPatterns(List.of("*"));  // fixed
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setAllowedHeaders(List.of("*"));         // fixed
         config.setExposedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(false);
         config.setMaxAge(3600L);
