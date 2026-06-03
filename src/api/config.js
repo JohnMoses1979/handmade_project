@@ -1,27 +1,28 @@
 import { Platform } from "react-native";
 
-const resolveApiHost = () => {
+const EC2_IP = "16.112.231.38";
+
+const trimTrailingSlash = (url) => url.replace(/\/+$/, "");
+
+const resolveBaseUrl = () => {
   const configuredUrl =
     globalThis?.process?.env?.EXPO_PUBLIC_API_URL?.trim() ||
     globalThis?.process?.env?.REACT_NATIVE_API_URL?.trim();
 
   if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, "");
+    const cleanUrl = trimTrailingSlash(configuredUrl);
+    return cleanUrl.endsWith("/api") ? cleanUrl : `${cleanUrl}/api`;
   }
 
+  // Web deployment
   if (Platform.OS === "web" && typeof window !== "undefined") {
-    const host = window.location.hostname?.trim();
-    if (host) {
-      return host;
-    }
+    return "/api";
   }
 
-  return "192.168.1.6";
+  // Production APK fallback
+  return `http://${EC2_IP}/api`;
 };
 
-const resolvedApiHost = resolveApiHost();
-export const BASE_URL = resolvedApiHost.startsWith("http")
-  ? `${resolvedApiHost}/api`
-  : `http://${resolvedApiHost}:8080/api`;
+export const BASE_URL = resolveBaseUrl();
 
 export default BASE_URL;

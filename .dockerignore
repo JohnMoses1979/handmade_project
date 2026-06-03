@@ -1,0 +1,15 @@
+node_modules
+.expo
+dist
+web-build
+.git
+.gitignore
+npm-debug.log
+.DS_Store
+
+backend/seller/target
+backend/seller/.mvn
+backend/seller/uploads
+uploads
+
+*.log
