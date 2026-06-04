@@ -19,10 +19,6 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOriginPatterns(
-                        "http://localhost:*",
-                        "http://127.0.0.1:*",
-                        "http://192.168.*:*",
-                        "http://10.*:*",
                         "http://16.112.231.38",
                         "http://16.112.231.38:*"
                 )
@@ -33,10 +29,6 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addMapping("/uploads/**")
                 .allowedOriginPatterns(
-                        "http://localhost:*",
-                        "http://127.0.0.1:*",
-                        "http://192.168.*:*",
-                        "http://10.*:*",
                         "http://16.112.231.38",
                         "http://16.112.231.38:*"
                 )
