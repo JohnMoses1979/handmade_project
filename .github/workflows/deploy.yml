@@ -16,14 +16,12 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           script: |
             set -e
 
             echo "Going to project folder..."
-            cd ${{ secrets.PROJECT_PATH }}
-
-            echo "Checking current branch..."
-            git status
+            cd /home/ubuntu/handmade_project
 
             echo "Pulling latest code from GitHub..."
             git fetch origin main
