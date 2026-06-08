@@ -18,26 +18,23 @@ jobs:
 
       - name: Deploy on EC2
         run: |
-          ssh -i ~/.ssh/ec2_key \
-            -o IdentitiesOnly=yes \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'DEPLOY'
-              set -e
+          ssh -i ~/.ssh/ec2_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            set -e
 
-              echo "Going to project folder..."
-              cd /home/ubuntu/handmade_project
+            echo "Going to project folder..."
+            cd /home/ubuntu/handmade_project
 
-              echo "Pulling latest code from GitHub..."
-              git fetch origin main
-              git reset --hard origin/main
+            echo "Pulling latest code from GitHub..."
+            git fetch origin main
+            git reset --hard origin/main
 
-              echo "Rebuilding Docker containers..."
-              sudo docker compose down
-              sudo docker compose up -d --build
+            echo "Rebuilding Docker containers..."
+            sudo docker compose down
+            sudo docker compose up -d --build
 
-              echo "Cleaning unused Docker images..."
-              sudo docker image prune -f
+            echo "Cleaning unused Docker images..."
+            sudo docker image prune -f
 
-              echo "Deployment completed. Running containers:"
-              sudo docker ps
-DEPLOY
+            echo "Deployment completed. Running containers:"
+            sudo docker ps
+          '
