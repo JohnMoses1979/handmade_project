@@ -131,11 +131,31 @@ import { BASE_URL } from "./config";
 
 const parseJsonSafe = async (response) => {
   const text = await response.text();
-  if (!text) return {};
+  if (!text) {
+    return response.ok
+      ? {}
+      : {
+          success: false,
+          message: `Server returned ${response.status}. Please try again.`,
+        };
+  }
+
   try {
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    if (!response.ok) {
+      return {
+        success: false,
+        ...data,
+        message: data?.message || `Server returned ${response.status}. Please try again.`,
+      };
+    }
+
+    return data;
   } catch {
-    return { success: false, message: text.slice(0, 160) };
+    return {
+      success: false,
+      message: text.slice(0, 160) || `Server returned ${response.status}. Please try again.`,
+    };
   }
 };
 
@@ -171,7 +191,10 @@ export const signupCustomerAPI = async ({ name, email, password, confirmPassword
     return await parseJsonSafe(response);
   } catch (error) {
     console.error("signupCustomerAPI error:", error);
-    return { success: false, message: "Unable to sign up right now." };
+    return {
+      success: false,
+      message: `Cannot reach the server at ${BASE_URL}. Please make sure the backend is running and your API URL is correct.`,
+    };
   }
 };
 

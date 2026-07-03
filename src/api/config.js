@@ -3,6 +3,18 @@ import { NativeModules, Platform } from "react-native";
 const trimTrailingSlash = (value) => String(value || "").trim().replace(/\/+$/, "");
 const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || "").trim());
 
+const getConfiguredApiUrl = () => {
+  try {
+    return (
+      process.env.EXPO_PUBLIC_API_URL?.trim() ||
+      process.env.REACT_NATIVE_API_URL?.trim() ||
+      ""
+    );
+  } catch {
+    return "";
+  }
+};
+
 const resolveServerBaseUrl = (apiBaseUrl) => {
   const base = trimTrailingSlash(apiBaseUrl);
   if (!base) return "";
@@ -24,9 +36,7 @@ const resolveServerBaseUrl = (apiBaseUrl) => {
 };
 
 const resolveApiBaseUrl = () => {
-  const configuredUrl =
-    globalThis?.process?.env?.EXPO_PUBLIC_API_URL?.trim() ||
-    globalThis?.process?.env?.REACT_NATIVE_API_URL?.trim();
+  const configuredUrl = getConfiguredApiUrl();
 
   const isWeb = Platform.OS === "web" && typeof window !== "undefined";
   const isSecureWebOrigin = isWeb && window.location?.protocol === "https:";
