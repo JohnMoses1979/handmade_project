@@ -22,7 +22,7 @@ const resolveBackendTarget = () => {
     }
   }
 
-  return "http://192.168.0.21:8085";
+  return "http://16.112.231.38:8080";
 };
 
 const backendTarget = resolveBackendTarget();

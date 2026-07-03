@@ -41,7 +41,7 @@ const resolveApiBaseUrl = () => {
     }
 
     if (!isWeb) {
-      return `http://${normalized}:8085/api`;
+      return `http://${normalized}:8080/api`;
     }
   }
 
@@ -54,7 +54,7 @@ const resolveApiBaseUrl = () => {
       return "/api";
     }
     const host = window.location.hostname || "localhost";
-    return `http://${host}:8085/api`;
+    return `http://${host}:8080/api`;
   }
 
   const scriptUrl =
@@ -66,14 +66,14 @@ const resolveApiBaseUrl = () => {
       const parsed = new URL(scriptUrl);
       const host = parsed.hostname?.trim();
       if (host) {
-        return `http://${host}:8085/api`;
+        return `http://${host}:8080/api`;
       }
     } catch {
       // Fall through to the explicit local fallback below.
     }
   }
 
-  return "http://192.168.0.21:8085/api";
+  return "http://16.112.231.38:8080/api";
 };
 
 export const BASE_URL = resolveApiBaseUrl();
