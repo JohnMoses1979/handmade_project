@@ -36,32 +36,7 @@ const ADDRESS_TYPES = [
   { key: "other", label: "Other", icon: "location-outline", activeIcon: "location" },
 ];
 
-const INITIAL_ADDRESSES = [
-  {
-    id: "1",
-    type: "home",
-    name: "Arjun Reddy",
-    phone: "+91 98765 43210",
-    line1: "Flat 4B, Srinivasa Residency",
-    line2: "Banjara Hills, Road No. 12",
-    city: "Hyderabad",
-    state: "Telangana",
-    pincode: "500034",
-    isDefault: true,
-  },
-  {
-    id: "2",
-    type: "work",
-    name: "Arjun Reddy",
-    phone: "+91 98765 43210",
-    line1: "Tower B, 5th Floor, Cyber Towers",
-    line2: "HITEC City",
-    city: "Hyderabad",
-    state: "Telangana",
-    pincode: "500081",
-    isDefault: false,
-  },
-];
+
 
 const EMPTY_FORM = {
   type: "home",
@@ -420,6 +395,7 @@ function AddressFormModal({ visible, initial, onSave, onClose }) {
                   style={{ flex: 1 }}
                 >
                   <ScrollView
+                    style={{ flex: 1 }}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.modalScrollContent}
                     keyboardShouldPersistTaps="handled"
@@ -1187,6 +1163,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
+    flex: 1,
     maxHeight: "93%",
     paddingBottom: Platform.OS === "ios" ? 32 : 12,
   },

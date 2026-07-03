@@ -31,7 +31,9 @@ services:
       mysql:
         condition: service_healthy
     env_file:
-      - .env
+      - ./backend/seller/.env
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/handmade_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     volumes:
       - backend_uploads:/app/uploads
     networks:

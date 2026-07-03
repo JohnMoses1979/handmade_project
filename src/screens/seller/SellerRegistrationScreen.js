@@ -782,7 +782,6 @@ const indianStates = [
 const DOC_FIELDS = [
   { key: "aadhar", title: "Aadhar Card", type: "Identity Proof" },
   { key: "pan", title: "PAN Card", type: "Identity Proof" },
-  { key: "businessProof", title: "Business Proof", type: "Business Document" },
   { key: "bankDetails", title: "Bank Details", type: "Bank Proof" },
 ];
 
@@ -1019,11 +1018,10 @@ export default function SellerRegistrationScreen({ navigation }) {
     description: "",
   });
 
-  // docs: { aadhar: null|asset, pan: null|asset, businessProof: null|asset, bankDetails: null|asset }
+  // docs: { aadhar: null|asset, pan: null|asset, bankDetails: null|asset }
   const [docs, setDocs] = useState({
     aadhar: null,
     pan: null,
-    businessProof: null,
     bankDetails: null,
   });
 
@@ -1068,7 +1066,6 @@ export default function SellerRegistrationScreen({ navigation }) {
     if (step === 3) {
       if (!docs.aadhar) return "Please upload your Aadhar card.";
       if (!docs.pan) return "Please upload your PAN card.";
-      if (!docs.businessProof) return "Please upload business proof.";
       if (!docs.bankDetails) return "Please upload bank details.";
     }
     if (step === 4) {

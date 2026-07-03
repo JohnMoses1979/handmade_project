@@ -4,10 +4,12 @@ import com.example.seller.entity.CustomerOrder;
 import com.example.seller.entity.CustomerOrderItem;
 import com.example.seller.entity.CustomerAddress;
 import com.example.seller.entity.ProductReview;
+import com.example.seller.entity.ReturnRequest;
 import com.example.seller.entity.WishlistItem;
 import com.example.seller.repository.CustomerAddressRepository;
 import com.example.seller.repository.CustomerOrderRepository;
 import com.example.seller.repository.ProductReviewRepository;
+import com.example.seller.repository.ReturnRequestRepository;
 import com.example.seller.repository.WishlistRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class CommerceService {
     private final WishlistRepository wishlistRepository;
     private final CustomerOrderRepository customerOrderRepository;
     private final ProductReviewRepository productReviewRepository;
+    private final ReturnRequestRepository returnRequestRepository;
     private final CustomerAddressRepository customerAddressRepository;
 
     @Value("${file.upload.dir}")
@@ -37,11 +40,13 @@ public class CommerceService {
             WishlistRepository wishlistRepository,
             CustomerOrderRepository customerOrderRepository,
             ProductReviewRepository productReviewRepository,
+            ReturnRequestRepository returnRequestRepository,
             CustomerAddressRepository customerAddressRepository
     ) {
         this.wishlistRepository = wishlistRepository;
         this.customerOrderRepository = customerOrderRepository;
         this.productReviewRepository = productReviewRepository;
+        this.returnRequestRepository = returnRequestRepository;
         this.customerAddressRepository = customerAddressRepository;
     }
 
@@ -212,6 +217,108 @@ public class CommerceService {
         }
         customerOrderRepository.save(order);
         return Map.of("success", true, "order", toOrderResponse(order));
+    }
+
+    public Map<String, Object> createReturnRequest(Map<String, Object> payload) {
+        String orderId = asString(payload.get("orderId"));
+        String productId = asString(payload.get("productId"));
+        String customerEmail = normalizeEmail(asString(payload.get("customerEmail")));
+        String sellerId = asString(payload.get("sellerId"));
+
+        if (orderId.isBlank()) {
+            return Map.of("success", false, "message", "Order id is required");
+        }
+        if (productId.isBlank()) {
+            productId = asString(payload.get("product"));
+        }
+        if (customerEmail.isBlank()) {
+            return Map.of("success", false, "message", "Customer email is required");
+        }
+
+        Optional<ReturnRequest> existing = returnRequestRepository.findByOrderIdAndProductId(orderId, productId);
+        if (existing.isPresent()) {
+            return Map.of("success", true, "request", toReturnResponse(existing.get()));
+        }
+
+        Optional<CustomerOrder> orderOpt = customerOrderRepository.findByOrderCode(orderId);
+        CustomerOrder order = orderOpt.orElse(null);
+        String returnCode = firstNonBlank(asString(payload.get("id")), "#RET" + String.valueOf(System.currentTimeMillis()).substring(6));
+        String resolvedSellerId = firstNonBlank(sellerId, order == null ? "" : asString(order.getItems().isEmpty() ? null : order.getItems().get(0).getSellerId()));
+        String resolvedSellerName = firstNonBlank(asString(payload.get("sellerName")), order == null ? "" : asString(order.getItems().isEmpty() ? null : order.getItems().get(0).getSellerName()));
+        String resolvedCustomer = firstNonBlank(asString(payload.get("customer")), order == null ? "" : order.getCustomerName(), "Customer");
+        String resolvedProduct = firstNonBlank(asString(payload.get("product")), "Product");
+        String priceText = firstNonBlank(asString(payload.get("price")), formatPrice(asDouble(payload.get("refundAmount"))));
+
+        ReturnRequest request = new ReturnRequest();
+        request.setReturnCode(returnCode);
+        request.setOrderId(orderId);
+        request.setOrderCode(orderId);
+        request.setProductId(productId);
+        request.setCustomer(resolvedCustomer);
+        request.setCustomerEmail(customerEmail);
+        request.setSellerId(resolvedSellerId);
+        request.setSellerName(resolvedSellerName);
+        request.setProduct(resolvedProduct);
+        request.setPrice(priceText);
+        request.setImage(asString(payload.get("image")));
+        request.setReason(firstNonBlank(asString(payload.get("reason")), "No reason added"));
+        request.setStatus(firstNonBlank(asString(payload.get("status")), "Return Requested"));
+        request.setRequestedOn(firstNonBlank(asString(payload.get("requestedOn")), "Today"));
+        request.setRefundAmount(asDouble(payload.get("refundAmount")));
+        request.setRefundAmountText(firstNonBlank(asString(payload.get("refundAmountText")), formatPrice(request.getRefundAmount())));
+        request.setRefundStatus(firstNonBlank(asString(payload.get("refundStatus")), "Not Credited"));
+        request.setRefundCredited(Boolean.TRUE.equals(asBoolean(payload.get("refundCredited"))));
+        request.setRefundMethod(firstNonBlank(asString(payload.get("refundMethod")), "Razorpay"));
+        request.setPaymentMethod(firstNonBlank(asString(payload.get("paymentMethod")), order == null ? "" : order.getPaymentMethod()));
+        request.setRazorpayPaymentId(firstNonBlank(asString(payload.get("razorpayPaymentId")), order == null ? "" : order.getRazorpayPaymentId()));
+        request.setRazorpayOrderId(firstNonBlank(asString(payload.get("razorpayOrderId")), order == null ? "" : order.getRazorpayOrderId()));
+        request.setRazorpayRefundId(asString(payload.get("razorpayRefundId")));
+        request.setCreditedOn(asString(payload.get("creditedOn")));
+        request.setCreatedAt(LocalDateTime.now());
+        request.setUpdatedAt(LocalDateTime.now());
+
+        ReturnRequest saved = returnRequestRepository.save(request);
+        return Map.of("success", true, "request", toReturnResponse(saved));
+    }
+
+    public List<Map<String, Object>> getSellerReturnRequests(String sellerId) {
+        String resolvedSellerId = asString(sellerId);
+        return returnRequestRepository.findBySellerIdOrderByCreatedAtDesc(resolvedSellerId)
+                .stream()
+                .map(this::toReturnResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<Map<String, Object>> getCustomerReturnRequests(String customerEmail) {
+        String resolvedCustomerEmail = normalizeEmail(customerEmail);
+        return returnRequestRepository.findByCustomerEmailOrderByCreatedAtDesc(resolvedCustomerEmail)
+                .stream()
+                .map(this::toReturnResponse)
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Object> updateReturnStatus(String returnCode, Map<String, Object> payload) {
+        Optional<ReturnRequest> optional = returnRequestRepository.findByReturnCode(returnCode);
+        if (optional.isEmpty()) {
+            return Map.of("success", false, "message", "Return request not found");
+        }
+
+        ReturnRequest request = optional.get();
+        String status = firstNonBlank(asString(payload.get("status")), request.getStatus());
+        request.setStatus(status);
+        request.setRefundStatus(firstNonBlank(asString(payload.get("refundStatus")), request.getRefundStatus()));
+        request.setRefundCredited(Boolean.TRUE.equals(asBoolean(payload.get("refundCredited"))) || request.isRefundCredited());
+        request.setRefundMethod(firstNonBlank(asString(payload.get("refundMethod")), request.getRefundMethod()));
+        request.setRazorpayRefundId(firstNonBlank(asString(payload.get("razorpayRefundId")), request.getRazorpayRefundId()));
+        request.setCreditedOn(firstNonBlank(asString(payload.get("creditedOn")), request.getCreditedOn()));
+        request.setUpdatedAt(LocalDateTime.now());
+
+        if ("Product Received".equalsIgnoreCase(status) && request.isRefundCredited()) {
+            request.setRefundStatus("Credited");
+        }
+
+        ReturnRequest saved = returnRequestRepository.save(request);
+        return Map.of("success", true, "request", toReturnResponse(saved));
     }
 
     public Map<String, Object> assignDeliveryPerson(String orderCode, Map<String, Object> payload) {
@@ -543,6 +650,38 @@ public class CommerceService {
         return map;
     }
 
+    private Map<String, Object> toReturnResponse(ReturnRequest request) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", request.getReturnCode());
+        map.put("returnCode", request.getReturnCode());
+        map.put("orderId", request.getOrderId());
+        map.put("orderCode", request.getOrderCode());
+        map.put("productId", request.getProductId());
+        map.put("customer", request.getCustomer());
+        map.put("customerEmail", request.getCustomerEmail());
+        map.put("sellerId", request.getSellerId());
+        map.put("sellerName", request.getSellerName());
+        map.put("product", request.getProduct());
+        map.put("price", request.getPrice());
+        map.put("image", request.getImage());
+        map.put("reason", request.getReason());
+        map.put("status", request.getStatus());
+        map.put("requestedOn", request.getRequestedOn());
+        map.put("refundAmount", request.getRefundAmount());
+        map.put("refundAmountText", request.getRefundAmountText());
+        map.put("refundStatus", request.getRefundStatus());
+        map.put("refundCredited", request.isRefundCredited());
+        map.put("refundMethod", request.getRefundMethod());
+        map.put("paymentMethod", request.getPaymentMethod());
+        map.put("razorpayPaymentId", request.getRazorpayPaymentId());
+        map.put("razorpayOrderId", request.getRazorpayOrderId());
+        map.put("razorpayRefundId", request.getRazorpayRefundId());
+        map.put("creditedOn", request.getCreditedOn());
+        map.put("createdAt", request.getCreatedAt());
+        map.put("updatedAt", request.getUpdatedAt());
+        return map;
+    }
+
     private String formatDate(LocalDateTime value) {
         if (value == null) {
             return "";
@@ -555,6 +694,16 @@ public class CommerceService {
             return "";
         }
         return value.format(DateTimeFormatter.ofPattern("hh:mm a"));
+    }
+
+    private String formatPrice(double amount) {
+        if (amount <= 0) {
+            return "₹0";
+        }
+        if (Math.abs(amount - Math.rint(amount)) < 0.0001) {
+            return "₹" + String.format(Locale.ENGLISH, "%.0f", amount);
+        }
+        return "₹" + String.format(Locale.ENGLISH, "%.2f", amount);
     }
 
     private String generateOrderCode() {

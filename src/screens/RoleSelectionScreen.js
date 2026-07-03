@@ -132,7 +132,6 @@ import { Ionicons } from "@expo/vector-icons";
 const COLORS = {
   customer: "#2563EB",
   seller: "#16A34A",
-  admin: "#082843",
   text: "#0F172A",
   muted: "#64748B",
 };
@@ -142,9 +141,9 @@ export default function RoleSelectionScreen({ navigation }) {
     if (role === "seller") {
       navigation.navigate("SellerOnboardingScreen");
     } else if (role === "customer") {
-      navigation.navigate("CustomerOnboardingScreen");
-    } else if (role === "admin") {
-      navigation.navigate("AdminLoginScreen");
+      navigation.navigate("CustomerLoginScreen", {
+        role: "customer",
+      });
     }
   };
 
@@ -167,12 +166,6 @@ export default function RoleSelectionScreen({ navigation }) {
         onPress={() => openRole("seller")}
       />
 
-      <RoleCard
-        icon="shield-checkmark"
-        title="Admin"
-        color={COLORS.admin}
-        onPress={() => openRole("admin")}
-      />
     </SafeAreaView>
   );
 }

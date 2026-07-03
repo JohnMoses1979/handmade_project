@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
-import { BASE_URL } from "./config";
+import { BASE_URL, SERVER_URL } from "./config";
 
-const serverUrl = BASE_URL.replace("/api", "");
+const serverUrl = SERVER_URL;
 
 const parseResponse = async (response) => {
   const text = await response.text();

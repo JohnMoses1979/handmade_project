@@ -33,12 +33,22 @@ const IMAGE_WIDTH = width * 0.9;
 const IMAGE_HEIGHT = height * 0.43;
 
 export default function SellerOnboardingScreen({ navigation }) {
+  const goToRoleSelection = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "RoleSelectionScreen" }],
+    });
+  };
+
   const goToRegister = () => {
     navigation.navigate("SellerRegistrationScreen");
   };
 
   const goToLogin = () => {
-    navigation.navigate("SellerLoginScreen");
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "SellerLoginScreen" }],
+    });
   };
 
   return (
@@ -47,6 +57,14 @@ export default function SellerOnboardingScreen({ navigation }) {
 
       <View style={styles.container}>
         <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            activeOpacity={0.85}
+            onPress={goToRoleSelection}
+          >
+            <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
+          </TouchableOpacity>
+
           <View style={styles.brandRow}>
             <LinearGradient
               colors={[COLORS.primaryLight, COLORS.white]}
@@ -152,9 +170,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.soft,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 8,
+  },
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
   },
   logoCircle: {
     width: 44,
@@ -246,10 +276,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     elevation: 8,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 6px 12px rgba(14,50,67,0.15)" }
+      : {
+          shadowColor: COLORS.primary,
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 6 },
+        }),
   },
   floatingBadgeText: {
     marginLeft: 6,
@@ -304,10 +338,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     elevation: 10,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 8px 16px rgba(14,50,67,0.3)" }
+      : {
+          shadowColor: COLORS.primary,
+          shadowOpacity: 0.3,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 8 },
+        }),
   },
   primaryGradient: {
     height: 58,

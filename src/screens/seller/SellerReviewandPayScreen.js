@@ -1402,6 +1402,17 @@ export default function SellerReviewandPayScreen({
     sellerWillGet = 0,
   } = route?.params || {};
 
+  const sanitizeProductDataForNavigation = (data) => {
+    const { rawImages, ...rest } = data || {};
+    return {
+      ...rest,
+      image: typeof rest.image === "string" ? rest.image : null,
+      images: Array.isArray(rest.images)
+        ? rest.images.filter((item) => typeof item === "string")
+        : [],
+    };
+  };
+
   const [selectedMethod, setSelectedMethod] =
     useState("upi");
 
@@ -1435,7 +1446,7 @@ export default function SellerReviewandPayScreen({
     }
 
     navigation.replace("SellerPaymentSuccessScreen", {
-      productData,
+      productData: sanitizeProductDataForNavigation(productData),
       adminCommission,
     });
   }, [addSellerNotification, addSellerProductPending, adminCommission, navigation, productData]);
@@ -1612,13 +1623,10 @@ export default function SellerReviewandPayScreen({
       }
 
       setProcessing(false);
-      navigation.replace(
-        "SellerPaymentSuccessScreen",
-        {
-          productData,
-          adminCommission,
-        }
-      );
+      navigation.replace("SellerPaymentSuccessScreen", {
+        productData: sanitizeProductDataForNavigation(productData),
+        adminCommission,
+      });
       } catch (error) {
         setProcessing(false);
         showAlert("Payment Submit Failed", error?.message || "Unable to submit product.");

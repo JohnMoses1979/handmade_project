@@ -1,4 +1,3 @@
-
 // screens/customer/CustomerMyOrdersScreen.js
 
 import React, { useMemo, useState } from "react";
@@ -23,70 +22,17 @@ const COLORS = {
   text: "#111827",
   muted: "#6B7280",
   border: "#ECECEC",
-
   processingBg: "#FEF3C7",
   processingText: "#D97706",
-
   shippedBg: "#DBEAFE",
   shippedText: "#2563EB",
-
   deliveredBg: "#DCFCE7",
   deliveredText: "#16A34A",
-
   cancelledBg: "#FEE2E2",
   cancelledText: "#DC2626",
 };
 
 const filters = ["All Orders", "Processing", "Shipped", "Delivered", "Cancelled"];
-
-const demoOrders = [
-  {
-    id: "#ORD123456",
-    title: "Hand Embroidered Kurti",
-    qty: 1,
-    size: "M",
-    price: "₹899",
-    date: "12 May 2024",
-    time: "10:30 AM",
-    status: "Processing",
-    payment: "Cash on Delivery",
-    image: require("../../../assets/images/kurti.png"),
-  },
-  {
-    id: "#ORD123455",
-    title: "Homemade Besan Ladoo",
-    qty: 1,
-    price: "₹350",
-    date: "10 May 2024",
-    time: "06:15 PM",
-    status: "Shipped",
-    payment: "Cash on Delivery",
-    image: require("../../../assets/images/ladoo.png"),
-  },
-  {
-    id: "#ORD123454",
-    title: "Handmade Rakhi",
-    qty: 2,
-    price: "₹240",
-    date: "8 May 2024",
-    time: "11:20 AM",
-    status: "Delivered",
-    deliveredDate: "10 May 2024",
-    payment: "UPI Paid",
-    image: require("../../../assets/images/rakhi.png"),
-  },
-  {
-    id: "#ORD123453",
-    title: "Homemade Mango Pickle",
-    qty: 1,
-    price: "₹250",
-    date: "5 May 2024",
-    time: "02:45 PM",
-    status: "Cancelled",
-    payment: "Cash on Delivery",
-    image: require("../../../assets/images/mango-pickle.png"),
-  },
-];
 
 const fallbackImage = require("../../../assets/images/placeholder.png");
 
@@ -94,7 +40,6 @@ const getOrderDateParts = (order) => {
   if (order?.date && order?.time) {
     return { date: order.date, time: order.time };
   }
-
   const value = order?.createdAt ? new Date(order.createdAt) : new Date();
   return {
     date: value.toLocaleDateString("en-IN", {
@@ -121,12 +66,18 @@ const normalizeOrderForList = (order) => {
 
   return {
     ...order,
-    title: order?.title || firstProduct?.name || firstProduct?.title || "Product Order",
+    title:
+      order?.title ||
+      firstProduct?.name ||
+      firstProduct?.title ||
+      "Product Order",
     qty: qty || order?.qty || 1,
     size: firstProduct?.selectedSize || firstProduct?.size || order?.size,
     price:
       order?.price ||
-      (typeof order?.totalAmount === "number" ? `₹${order.totalAmount}` : order?.totalAmount) ||
+      (typeof order?.totalAmount === "number"
+        ? `₹${order.totalAmount}`
+        : order?.totalAmount) ||
       firstProduct?.finalPrice ||
       firstProduct?.price ||
       "₹0",
@@ -134,7 +85,11 @@ const normalizeOrderForList = (order) => {
     time,
     status: order?.status || "Processing",
     payment: order?.payment || order?.paymentMethod || "Cash on Delivery",
-    image: firstProduct?.image || firstProduct?.images?.[0] || order?.image || fallbackImage,
+    image:
+      firstProduct?.image ||
+      firstProduct?.images?.[0] ||
+      order?.image ||
+      fallbackImage,
   };
 };
 
@@ -142,12 +97,9 @@ export default function CustomerMyOrdersScreen({ navigation }) {
   const { orders: liveOrders = [], cartItems = [] } = useShop() || {};
   const [activeFilter, setActiveFilter] = useState("All Orders");
 
+  // ✅ demoOrders removed - only live orders
   const displayOrders = useMemo(() => {
-    const liveList = liveOrders.map(normalizeOrderForList);
-    if (liveList.length > 0) {
-      return liveList;
-    }
-    return demoOrders;
+    return liveOrders.map(normalizeOrderForList);
   }, [liveOrders]);
 
   const filteredOrders = useMemo(() => {
@@ -158,13 +110,29 @@ export default function CustomerMyOrdersScreen({ navigation }) {
   const getStatusStyle = (status) => {
     switch (status) {
       case "Processing":
-        return { bg: COLORS.processingBg, text: COLORS.processingText, icon: "time-outline" };
+        return {
+          bg: COLORS.processingBg,
+          text: COLORS.processingText,
+          icon: "time-outline",
+        };
       case "Shipped":
-        return { bg: COLORS.shippedBg, text: COLORS.shippedText, icon: "car-outline" };
+        return {
+          bg: COLORS.shippedBg,
+          text: COLORS.shippedText,
+          icon: "car-outline",
+        };
       case "Delivered":
-        return { bg: COLORS.deliveredBg, text: COLORS.deliveredText, icon: "checkmark-circle-outline" };
+        return {
+          bg: COLORS.deliveredBg,
+          text: COLORS.deliveredText,
+          icon: "checkmark-circle-outline",
+        };
       case "Cancelled":
-        return { bg: COLORS.cancelledBg, text: COLORS.cancelledText, icon: "close-circle-outline" };
+        return {
+          bg: COLORS.cancelledBg,
+          text: COLORS.cancelledText,
+          icon: "close-circle-outline",
+        };
       default:
         return { bg: "#F3F4F6", text: "#374151", icon: "ellipse-outline" };
     }
@@ -186,7 +154,8 @@ export default function CustomerMyOrdersScreen({ navigation }) {
       seller: "Bliss Handmade Store",
       sellerName: "Bliss Handmade Store",
     };
-    const products = existingProducts.length > 0 ? existingProducts : [fallbackProduct];
+    const products =
+      existingProducts.length > 0 ? existingProducts : [fallbackProduct];
 
     return {
       ...item,
@@ -227,14 +196,22 @@ export default function CustomerMyOrdersScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.goBack()}
+        >
           <Ionicons name="chevron-back" size={30} color="#111" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>My Orders</Text>
 
-        <TouchableOpacity style={styles.cartBtn} activeOpacity={0.85} onPress={handleCartPress}>
+        <TouchableOpacity
+          style={styles.cartBtn}
+          activeOpacity={0.85}
+          onPress={handleCartPress}
+        >
           <Ionicons name="cart-outline" size={26} color="#111" />
           {cartItems.length > 0 ? (
             <View style={styles.cartBadge}>
@@ -246,6 +223,7 @@ export default function CustomerMyOrdersScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* Filter Tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -258,16 +236,24 @@ export default function CustomerMyOrdersScreen({ navigation }) {
             style={styles.filterBtn}
             onPress={() => setActiveFilter(item)}
           >
-            <Text style={[styles.filterText, activeFilter === item && styles.activeFilterText]}>
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === item && styles.activeFilterText,
+              ]}
+            >
               {item}
             </Text>
-
             {activeFilter === item && <View style={styles.activeLine} />}
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      {/* Orders List */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {filteredOrders.map((item) => {
           const statusStyle = getStatusStyle(item.status);
 
@@ -284,10 +270,23 @@ export default function CustomerMyOrdersScreen({ navigation }) {
                 <View style={styles.orderInfo}>
                   <View style={styles.orderIdRow}>
                     <Text style={styles.orderId}>Order ID: {item.id}</Text>
-
-                    <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                      <Ionicons name={statusStyle.icon} size={14} color={statusStyle.text} />
-                      <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: statusStyle.bg },
+                      ]}
+                    >
+                      <Ionicons
+                        name={statusStyle.icon}
+                        size={14}
+                        color={statusStyle.text}
+                      />
+                      <Text
+                        style={[
+                          styles.statusText,
+                          { color: statusStyle.text },
+                        ]}
+                      >
                         {item.status}
                       </Text>
                     </View>
@@ -309,7 +308,11 @@ export default function CustomerMyOrdersScreen({ navigation }) {
 
                   {item.status === "Delivered" && (
                     <View style={styles.deliveredRow}>
-                      <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={18}
+                        color="#16A34A"
+                      />
                       <Text style={styles.deliveredText}>
                         Delivered on {item.deliveredDate}
                       </Text>
@@ -317,11 +320,15 @@ export default function CustomerMyOrdersScreen({ navigation }) {
                   )}
                 </View>
 
-                <TouchableOpacity activeOpacity={0.8} onPress={() => goToOrderDetails(item)}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => goToOrderDetails(item)}
+                >
                   <Ionicons name="chevron-forward" size={28} color="#111" />
                 </TouchableOpacity>
               </View>
 
+              {/* Action Buttons */}
               <View style={styles.buttonRow}>
                 <TouchableOpacity
                   style={styles.supportBtn}
@@ -337,7 +344,6 @@ export default function CustomerMyOrdersScreen({ navigation }) {
                     size={18}
                     color="#111"
                   />
-
                   <Text style={styles.supportText}>
                     {item.status === "Delivered" ? "Buy Again" : "Order Support"}
                   </Text>
@@ -355,11 +361,23 @@ export default function CustomerMyOrdersScreen({ navigation }) {
           );
         })}
 
+        {/* Empty State */}
         {filteredOrders.length === 0 && (
           <View style={styles.emptyBox}>
             <Ionicons name="cube-outline" size={60} color="#9CA3AF" />
             <Text style={styles.emptyTitle}>No Orders Found</Text>
-            <Text style={styles.emptyText}>Orders matching this filter will appear here.</Text>
+            <Text style={styles.emptyText}>
+              {activeFilter === "All Orders"
+                ? "You haven't placed any orders yet."
+                : `No ${activeFilter} orders found.`}
+            </Text>
+            <TouchableOpacity
+              style={styles.shopNowBtn}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate("ProductList")}
+            >
+              <Text style={styles.shopNowText}>Shop Now</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -374,7 +392,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
-
   header: {
     height: 72,
     backgroundColor: "#FFFFFF",
@@ -383,13 +400,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-
   headerTitle: {
     fontSize: 20,
     fontWeight: "900",
     color: "#111827",
   },
-
   cartBtn: {
     width: 42,
     height: 42,
@@ -397,7 +412,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   cartBadge: {
     position: "absolute",
     top: 2,
@@ -410,47 +424,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 4,
   },
-
   cartBadgeText: {
     color: "#fff",
     fontSize: 10,
     fontWeight: "900",
   },
-
   filterContainer: {
     backgroundColor: "#FFFFFF",
     paddingBottom: 10,
     paddingHorizontal: 14,
   },
-
   filterBtn: {
     marginRight: 24,
     paddingVertical: 10,
   },
-
   filterText: {
     fontSize: 15,
     fontWeight: "700",
     color: "#6B7280",
   },
-
   activeFilterText: {
     color: COLORS.primary,
     fontWeight: "900",
   },
-
   activeLine: {
     marginTop: 8,
     height: 3,
     borderRadius: 2,
     backgroundColor: COLORS.primary,
   },
-
   scrollContent: {
     padding: 14,
     paddingBottom: 30,
   },
-
   orderCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
@@ -458,36 +464,28 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: "#000",
     shadowOpacity: 0.06,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
     elevation: 3,
   },
-
   orderTop: {
     flexDirection: "row",
   },
-
   productImage: {
     width: 95,
     height: 95,
     borderRadius: 18,
     backgroundColor: "#F3F4F6",
   },
-
   orderInfo: {
     flex: 1,
     marginLeft: 14,
   },
-
   orderIdRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   orderId: {
     flex: 1,
     fontSize: 13,
@@ -495,7 +493,6 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginRight: 8,
   },
-
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -503,60 +500,51 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 14,
   },
-
   statusText: {
     marginLeft: 4,
     fontSize: 11,
     fontWeight: "900",
   },
-
   orderDate: {
     marginTop: 6,
     fontSize: 13,
     fontWeight: "700",
     color: "#6B7280",
   },
-
   productTitle: {
     marginTop: 12,
     fontSize: 16,
     fontWeight: "900",
     color: "#111827",
   },
-
   productMeta: {
     marginTop: 6,
     fontSize: 14,
     fontWeight: "700",
     color: "#6B7280",
   },
-
   price: {
     marginTop: 10,
     fontSize: 18,
     fontWeight: "900",
     color: "#111827",
   },
-
   deliveredRow: {
     marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
   },
-
   deliveredText: {
     marginLeft: 6,
     fontSize: 14,
     fontWeight: "800",
     color: "#16A34A",
   },
-
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 18,
   },
-
   supportBtn: {
     flex: 1,
     height: 48,
@@ -568,14 +556,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   supportText: {
     marginLeft: 8,
     fontSize: 15,
     fontWeight: "800",
     color: "#111827",
   },
-
   detailsBtn: {
     flex: 1,
     height: 48,
@@ -584,26 +570,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   detailsText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "900",
   },
-
   emptyBox: {
     alignItems: "center",
     marginTop: 80,
     paddingHorizontal: 30,
   },
-
   emptyTitle: {
     marginTop: 16,
     fontSize: 20,
     fontWeight: "900",
     color: COLORS.text,
   },
-
   emptyText: {
     marginTop: 6,
     textAlign: "center",
@@ -611,5 +593,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.muted,
     lineHeight: 20,
+  },
+  shopNowBtn: {
+    marginTop: 24,
+    height: 48,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  shopNowText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "900",
   },
 });

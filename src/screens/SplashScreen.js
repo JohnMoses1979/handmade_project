@@ -23,40 +23,41 @@ export default function SplashScreen({ navigation }) {
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const translateAnim = useRef(new Animated.Value(40)).current;
   const glowAnim = useRef(new Animated.Value(0.7)).current;
+  const useNativeDriver = Platform.OS !== "web";
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1500,
-        useNativeDriver: true,
-      }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver,
+        }),
 
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 40,
-        useNativeDriver: true,
-      }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 40,
+          useNativeDriver,
+        }),
 
-      Animated.timing(translateAnim, {
-        toValue: 0,
-        duration: 1200,
-        useNativeDriver: true,
-      }),
+        Animated.timing(translateAnim, {
+          toValue: 0,
+          duration: 1200,
+          useNativeDriver,
+        }),
 
       Animated.loop(
         Animated.sequence([
           Animated.timing(glowAnim, {
             toValue: 1,
             duration: 1200,
-            useNativeDriver: true,
+            useNativeDriver,
           }),
 
           Animated.timing(glowAnim, {
             toValue: 0.75,
             duration: 1200,
-            useNativeDriver: true,
+            useNativeDriver,
           }),
         ])
       ),
@@ -268,12 +269,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.4,
     paddingHorizontal: 20,
-    textShadowColor: "rgba(255,255,255,0.15)",
-    textShadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    textShadowRadius: 8,
+    ...(Platform.OS === "web"
+      ? {
+          textShadow: "0px 0px 8px rgba(255,255,255,0.15)",
+        }
+      : {
+          textShadowColor: "rgba(255,255,255,0.15)",
+          textShadowOffset: {
+            width: 0,
+            height: 0,
+          },
+          textShadowRadius: 8,
+        }),
   },
 
   // LOADING
@@ -293,9 +300,15 @@ const styles = StyleSheet.create({
 
   activeDot: {
     backgroundColor: "#00F0FF",
-    shadowColor: "#00F0FF",
-    shadowOpacity: 0.9,
-    shadowRadius: 8,
+    ...(Platform.OS === "web"
+      ? {
+          boxShadow: "0px 0px 8px rgba(0,240,255,0.9)",
+        }
+      : {
+          shadowColor: "#00F0FF",
+          shadowOpacity: 0.9,
+          shadowRadius: 8,
+        }),
     elevation: 6,
   },
 

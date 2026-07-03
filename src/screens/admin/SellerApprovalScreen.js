@@ -120,45 +120,45 @@ export default function SellerApprovalScreen({ navigation }) {
   /** Admin: seller's product list */
   const goToSellerProducts = useCallback(
     (seller) =>
-      navigation.navigate("AdminSellerProductsScreen", {
-        sellerId:   getSellerId(seller),
+      rootNavigation.navigate("ManageProducts", {
+        sellerId: getSellerId(seller),
         sellerName: seller?.shopName ?? seller?.name ?? "Seller",
         seller,
       }),
-    [navigation]
+    [rootNavigation]
   );
 
   /** Admin: orders placed with this seller */
   const goToSellerOrders = useCallback(
     (seller) =>
-      navigation.navigate("AdminSellerOrdersScreen", {
-        sellerId:   getSellerId(seller),
+      rootNavigation.navigate("ManageOrders", {
+        sellerId: getSellerId(seller),
         sellerName: seller?.shopName ?? seller?.name ?? "Seller",
         seller,
       }),
-    [navigation]
+    [rootNavigation]
   );
 
   /** Admin: complaints against this seller */
   const goToSellerComplaints = useCallback(
     (seller) =>
-      navigation.navigate("AdminSellerComplaintsScreen", {
-        sellerId:   getSellerId(seller),
+      rootNavigation.navigate("AdminComplaintReviewScreen", {
+        sellerId: getSellerId(seller),
         sellerName: seller?.shopName ?? seller?.name ?? "Seller",
         seller,
       }),
-    [navigation]
+    [rootNavigation]
   );
 
   /** Admin: payout / commission detail for this seller */
   const goToSellerPayouts = useCallback(
     (seller) =>
-      navigation.navigate("AdminSellerPayoutsScreen", {
-        sellerId:   getSellerId(seller),
+      rootNavigation.navigate("AdminPayouts", {
+        sellerId: getSellerId(seller),
         sellerName: seller?.shopName ?? seller?.name ?? "Seller",
         seller,
       }),
-    [navigation]
+    [rootNavigation]
   );
 
   /** Direct phone call */

@@ -2416,7 +2416,8 @@ export default function CustomerProfileScreen({
       index: 0,
       routes: [
         {
-          name: "RoleSelectionScreen",
+          name: "CustomerLoginScreen",
+          params: { role: "customer" },
         },
       ],
     });

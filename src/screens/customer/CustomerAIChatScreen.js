@@ -13,7 +13,6 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { Audio } from "expo-av";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   createAiChatSessionAPI,
@@ -22,6 +21,8 @@ import {
   sendAiChatAPI,
   transcribeAiVoiceAPI,
 } from "../../api/aiApi";
+
+const Audio = Platform.OS === "web" ? null : require("expo-av").Audio;
 
 const C = {
   primary: "#082843",
@@ -334,6 +335,10 @@ export default function CustomerAIChatScreen({ navigation }) {
 
   const startRecording = useCallback(async () => {
     if (loading || transcribing || isRecording) return;
+    if (!Audio) {
+      Alert.alert("Voice input", "Voice recording is not available in the web preview.");
+      return;
+    }
 
     try {
       const permission = await Audio.requestPermissionsAsync();
@@ -369,6 +374,7 @@ export default function CustomerAIChatScreen({ navigation }) {
 
   const stopRecording = useCallback(async () => {
     if (!recordingRef.current) return;
+    if (!Audio) return;
 
     try {
       const recording = recordingRef.current;
@@ -702,11 +708,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.62)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.86)",
-    shadowColor: "#94A3B8",
-    shadowOpacity: 0.16,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 12,
     elevation: 4,
+    ...(Platform.OS === "web"
+      ? {
+          boxShadow: "0px 8px 12px rgba(148,163,184,0.16)",
+        }
+      : {
+          shadowColor: "#94A3B8",
+          shadowOpacity: 0.16,
+          shadowOffset: { width: 0, height: 8 },
+          shadowRadius: 12,
+        }),
   },
   glassIconBtnDisabled: {
     opacity: 0.55,

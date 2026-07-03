@@ -1,5 +1,6 @@
 import { registerRootComponent } from 'expo';
 
+import "./src/setup/webShims";
 import App from './App';
 
 // registerRootComponent calls AppRegistry.registerComponent('main', () => App);

@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
-import { BASE_URL } from "./config";
+import { BASE_URL, SERVER_URL } from "./config";
 
-const serverUrl = BASE_URL.replace("/api", "");
+const serverUrl = SERVER_URL;
 
 const parseJsonSafe = async (response) => {
   const text = await response.text();
@@ -24,7 +24,15 @@ const toServerImageUrl = (value) => {
   if (!value) return null;
   if (typeof value !== "string") return value;
   if (/^https?:\/\//i.test(value) || value.startsWith("data:") || value.startsWith("blob:")) {
+    if (value.includes("/uploads/documents/")) {
+      const fileName = value.split("/").pop();
+      return fileName ? `${serverUrl}/uploads/${encodeURIComponent(fileName)}` : value;
+    }
     return value;
+  }
+  if (value.startsWith("/uploads/documents/") || value.startsWith("uploads/documents/")) {
+    const fileName = value.split("/").pop();
+    return fileName ? `${serverUrl}/uploads/${encodeURIComponent(fileName)}` : value;
   }
   const fileName = value.split("/").pop()?.split("\\").pop();
   return fileName ? `${serverUrl}/uploads/${fileName}` : value;
@@ -84,6 +92,35 @@ const normalizeOrder = (order = {}) => {
     address: order.address || {},
   };
 };
+
+const normalizeReturnRequest = (request = {}) => ({
+  ...request,
+  id: String(request.id ?? request.returnCode ?? `RET${Date.now()}`),
+  returnCode: String(request.returnCode ?? request.id ?? ""),
+  orderId: String(request.orderId ?? request.orderCode ?? ""),
+  orderCode: String(request.orderCode ?? request.orderId ?? ""),
+  productId: String(request.productId ?? ""),
+  customer: request.customer ?? "Customer",
+  customerEmail: request.customerEmail ?? "",
+  sellerId: String(request.sellerId ?? ""),
+  sellerName: request.sellerName ?? "Seller",
+  product: request.product ?? "Product",
+  price: request.price ?? `₹${cleanPrice(request.refundAmount ?? 0)}`,
+  image: toServerImageUrl(request.image || request.productImage),
+  reason: request.reason ?? "No reason added",
+  status: request.status ?? "Return Requested",
+  requestedOn: request.requestedOn ?? "Today",
+  refundAmount: Number(request.refundAmount ?? 0),
+  refundAmountText: request.refundAmountText ?? `₹${cleanPrice(request.refundAmount ?? 0)}`,
+  refundStatus: request.refundStatus ?? "Not Credited",
+  refundCredited: Boolean(request.refundCredited ?? false),
+  refundMethod: request.refundMethod ?? "Razorpay",
+  paymentMethod: request.paymentMethod ?? "",
+  razorpayPaymentId: request.razorpayPaymentId ?? "",
+  razorpayOrderId: request.razorpayOrderId ?? "",
+  razorpayRefundId: request.razorpayRefundId ?? "",
+  creditedOn: request.creditedOn ?? null,
+});
 
 const normalizeWishlistItem = (item = {}) => ({
   ...item,
@@ -216,6 +253,64 @@ export const getCustomerOrdersAPI = async (customerEmail) => {
   } catch (error) {
     console.error("getCustomerOrdersAPI error:", error);
     return [];
+  }
+};
+
+export const createReturnRequestAPI = async (payload = {}) => {
+  try {
+    const response = await fetch(`${BASE_URL}/customer/returns`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await parseJsonSafe(response);
+    if (data?.request) {
+      return { ...data, request: normalizeReturnRequest(data.request) };
+    }
+    return data;
+  } catch (error) {
+    console.error("createReturnRequestAPI error:", error);
+    return { success: false, message: "Unable to create return request." };
+  }
+};
+
+export const getCustomerReturnRequestsAPI = async (customerEmail) => {
+  try {
+    const response = await fetch(`${BASE_URL}/customer/returns?customerEmail=${encodeURIComponent(customerEmail)}`);
+    const data = await parseJsonSafe(response);
+    return Array.isArray(data) ? data.map(normalizeReturnRequest) : [];
+  } catch (error) {
+    console.error("getCustomerReturnRequestsAPI error:", error);
+    return [];
+  }
+};
+
+export const getSellerReturnRequestsAPI = async (sellerId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/seller/returns?sellerId=${encodeURIComponent(sellerId)}`);
+    const data = await parseJsonSafe(response);
+    return Array.isArray(data) ? data.map(normalizeReturnRequest) : [];
+  } catch (error) {
+    console.error("getSellerReturnRequestsAPI error:", error);
+    return [];
+  }
+};
+
+export const updateReturnStatusAPI = async (returnCode, payload = {}) => {
+  try {
+    const response = await fetch(`${BASE_URL}/returns/${encodeURIComponent(returnCode)}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await parseJsonSafe(response);
+    if (data?.request) {
+      return { ...data, request: normalizeReturnRequest(data.request) };
+    }
+    return data;
+  } catch (error) {
+    console.error("updateReturnStatusAPI error:", error);
+    return { success: false, message: "Unable to update return status." };
   }
 };
 

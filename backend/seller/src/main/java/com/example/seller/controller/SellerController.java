@@ -178,6 +178,16 @@ public class SellerController {
         return ResponseEntity.ok(sellerService.getApprovedProducts());
     }
 
+    @GetMapping("/products/catalog")
+    public ResponseEntity<List<Map<String, Object>>> getProductCatalog() {
+        return ResponseEntity.ok(sellerService.getProductCatalog());
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<Map<String, Object>>> getCategories() {
+        return ResponseEntity.ok(sellerService.getProductCatalog());
+    }
+
     @PostMapping("/admin/products/{id}/approve")
     public ResponseEntity<Map<String, Object>> approveProduct(@PathVariable Long id) {
         return ResponseEntity.ok(sellerService.approveProduct(id));

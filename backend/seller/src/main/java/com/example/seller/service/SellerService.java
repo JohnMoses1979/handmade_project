@@ -4,10 +4,12 @@ import com.example.seller.dto.*;
 import com.example.seller.entity.CustomerOrder;
 import com.example.seller.entity.CustomerOrderItem;
 import com.example.seller.entity.Product;
+import com.example.seller.entity.ProductCategory;
 import com.example.seller.entity.RefundTransaction;
 import com.example.seller.entity.Seller;
 import com.example.seller.entity.SellerPayoutRequest;
 import com.example.seller.repository.CustomerOrderRepository;
+import com.example.seller.repository.ProductCategoryRepository;
 import com.example.seller.repository.ProductRepository;
 import com.example.seller.repository.RefundTransactionRepository;
 import com.example.seller.repository.SellerPayoutRequestRepository;
@@ -18,11 +20,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class SellerService {
@@ -36,6 +40,7 @@ public class SellerService {
     private final SellerPayoutRequestRepository sellerPayoutRequestRepository;
     private final RefundTransactionRepository refundTransactionRepository;
     private final RazorpayService razorpayService;
+    private final ProductCategoryRepository productCategoryRepository;
 
     @Autowired
     private ProductRepository productRepository;
@@ -50,7 +55,8 @@ public class SellerService {
                          CustomerOrderRepository customerOrderRepository,
                          SellerPayoutRequestRepository sellerPayoutRequestRepository,
                          RefundTransactionRepository refundTransactionRepository,
-                         RazorpayService razorpayService) {
+                         RazorpayService razorpayService,
+                         ProductCategoryRepository productCategoryRepository) {
         this.sellerRepository = sellerRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -59,6 +65,7 @@ public class SellerService {
         this.sellerPayoutRequestRepository = sellerPayoutRequestRepository;
         this.refundTransactionRepository = refundTransactionRepository;
         this.razorpayService = razorpayService;
+        this.productCategoryRepository = productCategoryRepository;
     }
 
     public Map<String, Object> register(SellerRegisterRequest req,
@@ -383,7 +390,7 @@ public class SellerService {
         product.setSellerEmail(sellerEmail);
         product.setSellerName(sellerName);
         product.setName((String) data.get("name"));
-        product.setCategory((String) data.get("category"));
+        product.setCategory(normalizeCatalogCategory((String) data.get("category")));
         product.setSubcategory((String) data.get("subcategory"));
         product.setPrice(asDouble(data.get("price")));
         product.setFinalPrice(asDouble(data.get("finalPrice")));
@@ -409,6 +416,7 @@ public class SellerService {
         }
 
         Product saved = productRepository.save(product);
+        syncProductCategories(saved.getCategory(), saved.getSubcategory(), firstImagePath(imagePaths));
         return Map.of("success", true, "message", "Product added successfully and pending approval.", "productId", saved.getId());
     }
 
@@ -418,6 +426,59 @@ public class SellerService {
 
     public List<Product> getApprovedProducts() {
         return productRepository.findByStatus(Product.ProductStatus.APPROVED);
+    }
+
+    public List<Map<String, Object>> getProductCatalog() {
+        List<ProductCategory> rootCategories = productCategoryRepository.findByParentCategoryIsNullOrderByNameAsc();
+        List<Product> activeProducts = productRepository.findAll().stream()
+                .filter(product -> Product.ProductStatus.APPROVED.equals(product.getStatus()))
+                .filter(product -> Boolean.TRUE.equals(product.getActive()))
+                .collect(Collectors.toList());
+
+        Map<String, Long> countsByCategory = activeProducts.stream()
+                .collect(Collectors.groupingBy(
+                        product -> normalizeCatalogCategory(firstNonBlank(product.getCategory(), "Other")),
+                        LinkedHashMap::new,
+                        Collectors.counting()
+                ));
+
+        return rootCategories.stream()
+                .sorted((first, second) -> compareCatalogOrder(first.getName(), second.getName()))
+                .map(root -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", root.getId());
+                    item.put("name", root.getName());
+                    item.put("label", root.getName());
+                    item.put("count", countsByCategory.getOrDefault(root.getName(), 0L));
+                    item.put("image", root.getImagePath());
+
+                    List<ProductCategory> childCategories = productCategoryRepository
+                            .findByParentCategory_IdOrderByNameAsc(root.getId());
+                    item.put(
+                            "subcategories",
+                            childCategories.stream()
+                                    .map(ProductCategory::getName)
+                                    .collect(Collectors.toList())
+                    );
+                    return item;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void backfillProductCategories() {
+        if (productCategoryRepository.count() > 0) {
+            return;
+        }
+
+        List<Product> products = productRepository.findAll();
+        for (Product product : products) {
+            syncProductCategories(
+                    normalizeCatalogCategory(product.getCategory()),
+                    product.getSubcategory(),
+                    firstImagePath(product.getImagePaths())
+            );
+        }
     }
 
     public Map<String, Object> approveProduct(Long productId) {
@@ -662,4 +723,123 @@ public class SellerService {
         String normalized = value.replace("\\", "/");
         return normalized.substring(normalized.lastIndexOf('/') + 1);
     }
+
+    private String normalizeCatalogValue(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String normalizeCatalogCategory(String value) {
+        String raw = normalizeCatalogValue(value);
+        if (raw.isBlank()) {
+            return "";
+        }
+
+        String lower = raw.toLowerCase();
+        return switch (lower) {
+            case "bag", "bags" -> "Bags";
+            case "cake", "cakes" -> "Cakes";
+            case "candle", "candles", "candles & soaps", "candle & soaps" -> "Candles";
+            case "card", "cards", "greeting cards" -> "Cards";
+            case "decor", "home decor", "decoration" -> "Decor";
+            case "dress", "dresses" -> "Dresses";
+            case "festive", "festival", "festive items" -> "Festive";
+            case "jewelry", "jewellery", "handmade jewelry" -> "Jewelry";
+            case "painting", "paintings" -> "Paintings";
+            case "pickle", "pickles" -> "Pickles";
+            case "pottery", "pottery & crafts" -> "Pottery";
+            case "sweet", "sweets" -> "Sweets";
+            default -> raw;
+        };
+    }
+
+    private String normalizeCatalogImage(String value) {
+        String raw = normalizeCatalogValue(value);
+        if (raw.isBlank()) {
+            return "";
+        }
+
+        String normalized = raw.replace("\\", "/");
+        int lastSlash = normalized.lastIndexOf('/');
+        String fileName = lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+        return fileName.isBlank() ? "" : fileName;
+    }
+
+    private void syncProductCategories(String categoryName, String subcategoryName, String imagePath) {
+        String normalizedCategory = normalizeCatalogCategory(categoryName);
+        if (normalizedCategory.isBlank()) {
+            return;
+        }
+
+        ProductCategory root = ensureCategory(normalizedCategory, null, imagePath);
+        if (normalizeCatalogValue(subcategoryName).isBlank()) {
+            return;
+        }
+
+        ensureCategory(normalizeCatalogValue(subcategoryName), root, "");
+    }
+
+    private ProductCategory ensureCategory(String name, ProductCategory parent, String imagePath) {
+        String normalizedName = normalizeCatalogValue(name);
+        if (normalizedName.isBlank()) {
+            return null;
+        }
+
+        Optional<ProductCategory> existing = parent == null
+                ? productCategoryRepository.findByNameIgnoreCaseAndParentCategoryIsNull(normalizedName)
+                : productCategoryRepository.findByNameIgnoreCaseAndParentCategory_Id(normalizedName, parent.getId());
+
+        ProductCategory category = existing.orElseGet(ProductCategory::new);
+        category.setName(normalizedName);
+        category.setParentCategory(parent);
+        if (category.getImagePath() == null || category.getImagePath().isBlank()) {
+            String normalizedImage = normalizeCatalogImage(imagePath);
+            if (!normalizedImage.isBlank()) {
+                category.setImagePath(normalizedImage);
+            }
+        }
+        return productCategoryRepository.save(category);
+    }
+
+    private String firstImagePath(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "";
+        }
+
+        for (String value : values) {
+            String normalized = normalizeCatalogImage(value);
+            if (!normalized.isBlank()) {
+                return normalized;
+            }
+        }
+        return "";
+    }
+
+    private int compareCatalogOrder(String first, String second) {
+        List<String> order = List.of(
+                "Bags",
+                "Cakes",
+                "Candles",
+                "Cards",
+                "Decor",
+                "Dresses",
+                "Festive",
+                "Jewelry",
+                "Paintings",
+                "Pickles",
+                "Pottery",
+                "Sweets"
+        );
+
+        int firstIndex = order.indexOf(first);
+        int secondIndex = order.indexOf(second);
+
+        if (firstIndex != secondIndex) {
+            if (firstIndex == -1) return 1;
+            if (secondIndex == -1) return -1;
+            return Integer.compare(firstIndex, secondIndex);
+        }
+
+        return first.compareToIgnoreCase(second);
+    }
+
 }

@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useShop } from "../../context/ShopContext";
+import { adminLoginAPI } from "../../api/adminApi";
 import { forgotPasswordAPI, resetPasswordAPI, verifyOtpAPI } from "../../api/sellerApi";
 import { setAuthSession } from "../../utils/authSession";
 import { showAlert } from "../../utils/showAlert";
@@ -140,7 +141,7 @@ const SellerLoginScreen = ({ navigation }) => {
     setForgot(createForgotState());
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim()) {
       showAlert("Required", "Please enter email or phone number.");
       return;
@@ -151,10 +152,29 @@ const SellerLoginScreen = ({ navigation }) => {
     }
 
     setLoading(true);
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
 
-    setTimeout(async () => {
+      const adminResult = await adminLoginAPI({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (adminResult?.success) {
+        setAuthSession({
+          role: "admin",
+          email: adminResult?.admin?.email || normalizedEmail,
+          name: adminResult?.admin?.name || "Admin",
+          phone: "",
+          location: "",
+          bio: "",
+          avatar: null,
+        });
+        navigation.replace("AdminTabs");
+        return;
+      }
+
       const result = await loginSeller(email.trim(), password);
-      setLoading(false);
 
       if (!result) {
         showAlert("Login Failed", "Invalid credentials. Please try again.");
@@ -192,7 +212,9 @@ const SellerLoginScreen = ({ navigation }) => {
         seller: result,
       });
       navigation.replace("SellerTabs");
-    }, 1200);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendOtp = async () => {
@@ -520,31 +542,6 @@ const SellerLoginScreen = ({ navigation }) => {
 
           {forgotOpen ? renderForgotPanel() : null}
 
-          <View style={s.orRow}>
-            <View style={s.orLine} />
-            <Text style={s.orText}>or continue with</Text>
-            <View style={s.orLine} />
-          </View>
-
-          <View style={s.socialRow}>
-            <TouchableOpacity
-              style={s.socialBtn}
-              onPress={() => showAlert("Google", "Google login coming soon.")}
-              activeOpacity={0.8}
-            >
-              <Text style={s.googleG}>G</Text>
-              <Text style={s.socialText}>Google</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.socialBtn, s.fbBtn]}
-              onPress={() => showAlert("Facebook", "Facebook login coming soon.")}
-              activeOpacity={0.8}
-            >
-              <Text style={s.fbF}>f</Text>
-              <Text style={[s.socialText, { color: C.white }]}>Facebook</Text>
-            </TouchableOpacity>
-          </View>
-
           <TouchableOpacity
             style={s.registerRow}
             onPress={() => navigation.navigate("SellerRegistrationScreen")}
@@ -783,30 +780,6 @@ const s = StyleSheet.create({
   },
   forgotHintTitle: { color: C.success, fontWeight: "900", fontSize: 12.5, marginBottom: 3 },
   forgotHintText: { color: "#226b4a", fontSize: 12.5, lineHeight: 18 },
-  orRow: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 10 },
-  orLine: { flex: 1, height: 1, backgroundColor: C.border },
-  orText: { fontSize: 12, color: C.textSec },
-  socialRow: { flexDirection: "row", gap: 12, marginBottom: 24 },
-  socialBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 8,
-    backgroundColor: C.white,
-    borderWidth: 1.5,
-    borderColor: C.border,
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  fbBtn: { backgroundColor: "#1877F2", borderColor: "#1877F2" },
-  googleG: { fontSize: 18, fontWeight: "900", color: "#DB4437" },
-  fbF: { fontSize: 18, fontWeight: "900", color: C.white },
-  socialText: { fontSize: 14, fontWeight: "700", color: C.text },
   registerRow: { alignItems: "center", paddingVertical: 8 },
   registerText: { fontSize: 13.5, color: C.textSec },
   registerBold: { color: C.primary, fontWeight: "900" },

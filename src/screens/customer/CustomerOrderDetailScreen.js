@@ -1372,6 +1372,7 @@ export default function OrderDetailScreen({ navigation, route }) {
     customerNotifications: notifications = [],
     createReturnRequest = () => {},
     addProductReview = () => {},
+    updateOrderStatus = () => {},
     formatPrice = (n) => `₹${n || 0}`,
     cleanPrice = (n) => Number(String(n || "0").replace(/[₹,\s]/g, "")) || 0,
   } = useShop();
@@ -1460,7 +1461,7 @@ export default function OrderDetailScreen({ navigation, route }) {
     setReturnModalVisible(true);
   };
 
-  const submitReturn = () => {
+  const submitReturn = async () => {
     if (!returnReason.trim()) {
       setReturnError("Please enter return reason.");
       return;
@@ -1491,16 +1492,19 @@ export default function OrderDetailScreen({ navigation, route }) {
       productImage: getProductImage(selectedProduct),
     };
 
-    createReturnRequest(returnData);
+    try {
+      const savedReturn = await createReturnRequest(returnData);
+      setLocalReturns((prev) => ({
+        ...prev,
+        [productKey]: savedReturn || returnData,
+      }));
 
-    setLocalReturns((prev) => ({
-      ...prev,
-      [productKey]: returnData,
-    }));
-
-    setReturnModalVisible(false);
-    setReturnReason("");
-    setReturnError("");
+      setReturnModalVisible(false);
+      setReturnReason("");
+      setReturnError("");
+    } catch (error) {
+      setReturnError(error?.message || "Unable to submit return request.");
+    }
   };
 
   const openReviewModal = (item, index) => {
@@ -1614,6 +1618,9 @@ export default function OrderDetailScreen({ navigation, route }) {
     };
 
     setLocalCancelData(cancelData);
+    if (liveOrder?.id != null) {
+      updateOrderStatus(liveOrder.id, "Cancelled");
+    }
     setLocalStatus("Cancelled");
     setCancelModalVisible(false);
     setCancelReason("");

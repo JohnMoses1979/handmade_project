@@ -43,9 +43,19 @@ public class CommerceController {
         return ResponseEntity.ok(commerceService.createOrder(payload));
     }
 
+    @PostMapping("/customer/returns")
+    public ResponseEntity<Map<String, Object>> createReturnRequest(@RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(commerceService.createReturnRequest(payload));
+    }
+
     @GetMapping("/customer/orders")
     public ResponseEntity<List<Map<String, Object>>> getCustomerOrders(@RequestParam String customerEmail) {
         return ResponseEntity.ok(commerceService.getCustomerOrders(customerEmail));
+    }
+
+    @GetMapping("/customer/returns")
+    public ResponseEntity<List<Map<String, Object>>> getCustomerReturns(@RequestParam String customerEmail) {
+        return ResponseEntity.ok(commerceService.getCustomerReturnRequests(customerEmail));
     }
 
     @GetMapping("/customer/addresses")
@@ -94,6 +104,11 @@ public class CommerceController {
         return ResponseEntity.ok(commerceService.getSellerOrders(sellerId));
     }
 
+    @GetMapping("/seller/returns")
+    public ResponseEntity<List<Map<String, Object>>> getSellerReturns(@RequestParam String sellerId) {
+        return ResponseEntity.ok(commerceService.getSellerReturnRequests(sellerId));
+    }
+
     @PostMapping("/orders/{orderId}/status")
     public ResponseEntity<Map<String, Object>> updateOrderStatus(
             @PathVariable String orderId,
@@ -108,6 +123,14 @@ public class CommerceController {
             @RequestBody Map<String, Object> payload
     ) {
         return ResponseEntity.ok(commerceService.updateDeliveryStatus(orderId, String.valueOf(payload.get("deliveryStatus"))));
+    }
+
+    @PutMapping("/returns/{returnCode}/status")
+    public ResponseEntity<Map<String, Object>> updateReturnStatus(
+            @PathVariable String returnCode,
+            @RequestBody Map<String, Object> payload
+    ) {
+        return ResponseEntity.ok(commerceService.updateReturnStatus(returnCode, payload));
     }
 
     @PostMapping("/orders/{orderId}/assign-delivery")

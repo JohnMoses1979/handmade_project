@@ -182,27 +182,6 @@ function buildDistribution(reviews) {
   ];
 }
 
-function buildFallbackRelated(product, gallery, originalPrice) {
-  const mainImage = gallery[0];
-  const names = [
-    `${product?.name || "Kurti"} With Dupatta`,
-    `${product?.name || "Kurti"} Printed Set`,
-    `${product?.name || "Kurti"} Daily Wear`,
-    `${product?.name || "Kurti"} Elegant Style`,
-  ];
-
-  return names.map((name, index) => ({
-    id: `fallback-related-${index}`,
-    name,
-    image: gallery[index % gallery.length] || mainImage,
-    price: formatPrice(Math.max(originalPrice + index * 17 - 12, 299)),
-    rating: (3.8 + index * 0.1).toFixed(1),
-    reviews: 87 + index * 29,
-    category: product?.category,
-    subcategory: product?.subcategory,
-  }));
-}
-
 function RelatedCard({ item, onPress }) {
   const image = resolveImage(item?.image || item?.images?.[0]);
   const price = item?.finalPrice || item?.price || "\u20B90";
@@ -371,30 +350,38 @@ export default function ProductDetailsScreen({ route, navigation }) {
     const routeRelated = Array.isArray(route?.params?.relatedProducts)
       ? route.params.relatedProducts
       : [];
-    const sameCategoryFromRoute = routeRelated.filter(
-      (item) =>
-        String(item?.id) !== productId &&
-        ((product?.category && item?.category === product.category) ||
-          (product?.subcategory && item?.subcategory === product.subcategory))
-    );
+    const sameCategoryFromRoute = routeRelated.filter((item) => {
+      const sameProduct = String(item?.id) === String(productId);
+      const sameCategory =
+        product?.category &&
+        String(item?.category ?? "").trim().toLowerCase() ===
+          String(product.category ?? "").trim().toLowerCase();
+      const sameSubcategory =
+        product?.subcategory &&
+        String(item?.subcategory ?? "").trim().toLowerCase() ===
+          String(product.subcategory ?? "").trim().toLowerCase();
+      return !sameProduct && (sameCategory || sameSubcategory);
+    });
 
     if (sameCategoryFromRoute.length > 0) {
       return sameCategoryFromRoute.slice(0, 8);
     }
 
-    const matching = customerVisibleProducts.filter(
-      (item) =>
-        String(item?.id) !== productId &&
-        ((product?.category && item?.category === product.category) ||
-          (product?.subcategory && item?.subcategory === product.subcategory))
-    );
+    const matching = customerVisibleProducts.filter((item) => {
+      const sameProduct = String(item?.id) === String(productId);
+      const sameCategory =
+        product?.category &&
+        String(item?.category ?? "").trim().toLowerCase() ===
+          String(product.category ?? "").trim().toLowerCase();
+      const sameSubcategory =
+        product?.subcategory &&
+        String(item?.subcategory ?? "").trim().toLowerCase() ===
+          String(product.subcategory ?? "").trim().toLowerCase();
+      return !sameProduct && (sameCategory || sameSubcategory);
+    });
 
-    if (matching.length > 0) {
-      return matching.slice(0, 8);
-    }
-
-    return buildFallbackRelated(product, gallery, originalPrice);
-  }, [route?.params?.relatedProducts, customerVisibleProducts, productId, product, gallery, originalPrice]);
+    return matching.slice(0, 8);
+  }, [route?.params?.relatedProducts, customerVisibleProducts, productId, product]);
 
   const realPhotoGallery = useMemo(
     () => reviewList.flatMap((item) => item.images).slice(0, 3),
@@ -670,7 +657,14 @@ export default function ProductDetailsScreen({ route, navigation }) {
               ))}
             </ScrollView>
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>You might also like</Text>
+            <Text style={styles.emptyRelatedText}>
+              More products from this category will appear here.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Customer Ratings & Reviews</Text>

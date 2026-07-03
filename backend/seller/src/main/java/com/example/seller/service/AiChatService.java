@@ -6,7 +6,6 @@ import com.example.seller.repository.AiChatMessageRepository;
 import com.example.seller.repository.AiChatSessionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,7 +42,6 @@ public class AiChatService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Autowired
     public AiChatService(AiChatSessionRepository chatSessionRepository,
                          AiChatMessageRepository chatMessageRepository) {
         this.chatSessionRepository = chatSessionRepository;
@@ -193,13 +191,13 @@ public class AiChatService {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 return Map.of(
                         "success", false,
-                        "message", String.valueOf(responseBody.getOrDefault("error", responseBody.getOrDefault("message", "Groq chat failed")))
+                        "message", buildGroqErrorMessage(response.statusCode(), responseBody, "Groq chat failed")
                 );
             }
 
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.getOrDefault("choices", List.of());
+            List<Map<String, Object>> choices = asListOfMaps(responseBody.get("choices"));
             Map<String, Object> firstChoice = choices.isEmpty() ? Map.of() : choices.get(0);
-            Map<String, Object> choiceMessage = (Map<String, Object>) firstChoice.getOrDefault("message", Map.of());
+            Map<String, Object> choiceMessage = asMap(firstChoice.get("message"));
             String content = String.valueOf(choiceMessage.getOrDefault("content", "")).trim();
 
             if (content.isBlank()) {
@@ -263,7 +261,7 @@ public class AiChatService {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 return Map.of(
                         "success", false,
-                        "message", String.valueOf(responseBody.getOrDefault("error", responseBody.getOrDefault("message", "Audio transcription failed")))
+                        "message", buildGroqErrorMessage(response.statusCode(), responseBody, "Audio transcription failed")
                 );
             }
 
@@ -400,6 +398,31 @@ public class AiChatService {
         return value == null ? "" : String.valueOf(value).trim();
     }
 
+    private String buildGroqErrorMessage(int statusCode, Map<String, Object> responseBody, String fallbackMessage) {
+        Map<String, Object> errorObject = asMap(responseBody.get("error"));
+        String message = trimToNull(errorObject.get("message"));
+        String code = trimToNull(errorObject.get("code"));
+        String type = trimToNull(errorObject.get("type"));
+
+        if (statusCode == 401 || "invalid_api_key".equals(code)) {
+            return "The Groq API key is invalid or expired. Set a valid GROQ_API_KEY and restart the backend.";
+        }
+
+        if (message != null) {
+            if (code != null || type != null) {
+                return message + (code != null ? " (" + code + ")" : "") + (type != null ? " [" + type + "]" : "");
+            }
+            return message;
+        }
+
+        String topLevelMessage = trimToNull(responseBody.get("message"));
+        if (topLevelMessage != null) {
+            return topLevelMessage;
+        }
+
+        return fallbackMessage;
+    }
+
     private Map<String, Object> parseBody(String body) {
         try {
             return objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {});
@@ -408,6 +431,35 @@ public class AiChatService {
             map.put("message", body == null ? "" : body);
             return map;
         }
+    }
+
+    private List<Map<String, Object>> asListOfMaps(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object item : list) {
+            Map<String, Object> map = asMap(item);
+            if (!map.isEmpty()) {
+                result.add(map);
+            }
+        }
+        return result;
+    }
+
+    private Map<String, Object> asMap(Object value) {
+        if (!(value instanceof Map<?, ?> rawMap)) {
+            return Map.of();
+        }
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        rawMap.forEach((key, entryValue) -> {
+            if (key != null) {
+                map.put(String.valueOf(key), entryValue);
+            }
+        });
+        return map;
     }
 
     private byte[] buildMultipartBody(MultipartFile file, String boundary, String extension) throws IOException {

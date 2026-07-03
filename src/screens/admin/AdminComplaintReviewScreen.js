@@ -11,7 +11,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { showAlert } from "../../utils/showAlert";
 import { useShop } from "../../context/ShopContext";
-import { BASE_URL } from "../../api/config";
+import { SERVER_URL } from "../../api/config";
 
 const C = {
   primary: "#0e3243",
@@ -60,7 +60,7 @@ const formatTime = (value) => {
   }
 };
 
-const serverUrl = BASE_URL.replace("/api", "");
+const serverUrl = SERVER_URL;
 
 const shortText = (value, fallback) => {
   const text = String(value || fallback || "").trim();

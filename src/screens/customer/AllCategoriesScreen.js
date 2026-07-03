@@ -1,6 +1,6 @@
 // src/screens/customer/AllCategoriesScreen.js
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useShop } from "../../context/ShopContext";
 
 const COLORS = {
   bg: "#ffffff",
@@ -21,78 +22,22 @@ const COLORS = {
   muted: "#6B7280",
 };
 
-const categories = [
-  {
-    id: "1",
-    label: "Dresses",
-    name: "Dresses",
-    image: require("../../../assets/images/dresses.png"),
-  },
-  {
-    id: "2",
-    label: "Sweets",
-    name: "Sweets",
-    image: require("../../../assets/images/sweets.png"),
-  },
-  {
-    id: "3",
-    label: "Festive Items",
-    name: "Festive",
-    image: require("../../../assets/images/festive.png"),
-  },
-  {
-    id: "4",
-    label: "Pickles",
-    name: "Pickles",
-    image: require("../../../assets/images/pickels.png"),
-  },
-  {
-    id: "5",
-    label: "Candles & Soaps",
-    name: "Candles",
-    image: require("../../../assets/images/candles.png"),
-  },
-  {
-    id: "6",
-    label: "Home Decor",
-    name: "Decor",
-    image: require("../../../assets/images/decor.png"),
-  },
-  {
-    id: "7",
-    label: "Handmade Jewelry",
-    name: "Jewelry",
-    image: require("../../../assets/images/jewelry.png"),
-  },
-  {
-    id: "8",
-    label: "Greeting Cards",
-    name: "Cards",
-    image: require("../../../assets/images/cards.png"),
-  },
-  {
-    id: "9",
-    label: "Pottery & Crafts",
-    name: "Pottery",
-    image: require("../../../assets/images/pottery.png"),
-  },
-  {
-    id: "10",
-    label: "Bags",
-    name: "Bags",
-    image: require("../../../assets/images/bags.png"),
-  },
-  {
-    id: "11",
-    label: "Paintings",
-    name: "Paintings",
-    image: require("../../../assets/images/painting.png"),
-  },
-];
-
 export default function AllCategoriesScreen({ navigation }) {
+  const { customerCategoryCatalog = [] } = useShop();
+
+  const categories = useMemo(
+    () =>
+      [...customerCategoryCatalog].sort((first, second) => {
+        const countDiff = Number(second.count || 0) - Number(first.count || 0);
+        if (countDiff !== 0) return countDiff;
+        return String(first.label || first.name || "").localeCompare(
+          String(second.label || second.name || "")
+        );
+      }),
+    [customerCategoryCatalog]
+  );
+
   const handleCategoryPress = (item) => {
-    // Navigate to ShopTab with the selected category
     navigation.navigate("ShopTab", {
       screen: "CustomerShopMain",
       params: { category: item.name },
@@ -106,8 +51,29 @@ export default function AllCategoriesScreen({ navigation }) {
       onPress={() => handleCategoryPress(item)}
     >
       <Image source={item.image} style={styles.image} resizeMode="cover" />
-      <View style={styles.overlay}>
-        <Text style={styles.title}>{item.label}</Text>
+      <View style={styles.cardBody}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.title}>{item.label}</Text>
+          <Text style={styles.count}>{item.count || 0} products</Text>
+        </View>
+
+        <View style={styles.chipWrap}>
+          {(item.subcategories || []).slice(0, 3).map((subcat) => (
+            <View key={subcat} style={styles.chip}>
+              <Text style={styles.chipText} numberOfLines={1}>
+                {subcat}
+              </Text>
+            </View>
+          ))}
+
+          {Array.isArray(item.subcategories) && item.subcategories.length > 3 ? (
+            <View style={styles.moreChip}>
+              <Text style={styles.moreChipText}>
+                +{item.subcategories.length - 3} more
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -134,7 +100,7 @@ export default function AllCategoriesScreen({ navigation }) {
       <FlatList
         data={categories}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.name}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
@@ -180,29 +146,70 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 8,
-    height: 180,
+    minHeight: 260,
     borderRadius: 22,
     overflow: "hidden",
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F3E8EE",
   },
 
   image: {
     width: "100%",
-    height: "100%",
+    height: 140,
   },
 
-  overlay: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    backgroundColor: "rgba(0,0,0,0.38)",
+  cardBody: {
+    padding: 12,
+  },
+
+  cardHeader: {
+    marginBottom: 10,
   },
 
   title: {
-    color: "#fff",
-    fontSize: 16,
+    color: COLORS.text,
+    fontSize: 15,
     fontWeight: "900",
+  },
+
+  count: {
+    marginTop: 3,
+    color: COLORS.muted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  chipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  chip: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#EFF6FF",
+  },
+
+  chipText: {
+    color: "#1D4ED8",
+    fontSize: 11,
+    fontWeight: "800",
+    maxWidth: 110,
+  },
+
+  moreChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#F3F4F6",
+  },
+
+  moreChipText: {
+    color: COLORS.muted,
+    fontSize: 11,
+    fontWeight: "800",
   },
 });

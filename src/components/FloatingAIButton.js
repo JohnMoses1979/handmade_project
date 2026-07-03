@@ -1,5 +1,5 @@
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet, View } from "react-native";
+import { TouchableOpacity, Text, StyleSheet, View, Platform } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function FloatingAIButton({ onPress }) {
@@ -26,10 +26,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 9999,
     elevation: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 12,
+    ...(Platform.OS === "web"
+      ? {
+          boxShadow: "0px 6px 12px rgba(0,0,0,0.18)",
+        }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.18,
+          shadowOffset: { width: 0, height: 6 },
+          shadowRadius: 12,
+        }),
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.16)",
   },

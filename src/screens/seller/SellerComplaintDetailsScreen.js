@@ -8,7 +8,7 @@ import {
   Image,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { BASE_URL } from "../../api/config";
+import { SERVER_URL } from "../../api/config";
 import { useShop } from "../../context/ShopContext";
 
 const C = {
@@ -51,7 +51,7 @@ const formatDate = (value) => {
   }
 };
 
-const serverUrl = BASE_URL.replace("/api", "");
+const serverUrl = SERVER_URL;
 
 const toImageSource = (value) => {
   if (!value || typeof value !== "string") return null;

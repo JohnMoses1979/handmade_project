@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
-import { BASE_URL } from "./config";
+import { BASE_URL, SERVER_URL } from "./config";
 
-const serverUrl = BASE_URL.replace("/api", "");
+const serverUrl = SERVER_URL;
 
 const toServerImageUrl = (value) => {
   if (typeof value !== "string") return null;
@@ -14,6 +14,10 @@ const toServerImageUrl = (value) => {
     trimmed.startsWith("https://") ||
     trimmed.startsWith("data:")
   ) {
+    if (trimmed.includes("/uploads/documents/")) {
+      const fileName = trimmed.split("/").pop();
+      return fileName ? `${serverUrl}/uploads/${encodeURIComponent(fileName)}` : trimmed;
+    }
     return trimmed;
   }
 
@@ -22,7 +26,12 @@ const toServerImageUrl = (value) => {
   }
 
   if (trimmed.startsWith("/uploads/") || trimmed.startsWith("uploads/")) {
-    return `${serverUrl}/${trimmed.replace(/^\/+/, "")}`;
+    const normalizedPath = trimmed.replace(/^\/+/, "");
+    if (normalizedPath.startsWith("uploads/documents/")) {
+      const fileName = normalizedPath.split("/").pop();
+      return fileName ? `${serverUrl}/uploads/${encodeURIComponent(fileName)}` : null;
+    }
+    return `${serverUrl}/${normalizedPath}`;
   }
 
   const fileName = trimmed
@@ -263,7 +272,7 @@ export const addProductAPI = async (productData, images, sellerId, sellerEmail, 
 export const getAllProductsAPI = async () => {
   try {
     const response = await fetch(`${BASE_URL}/admin/products`);
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     return Array.isArray(data) ? data.map(formatProduct) : [];
   } catch (e) {
     console.error("Fetch all products error", e);
@@ -274,10 +283,21 @@ export const getAllProductsAPI = async () => {
 export const getApprovedProductsAPI = async () => {
   try {
     const response = await fetch(`${BASE_URL}/products/approved`);
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     return Array.isArray(data) ? data.map(formatProduct) : [];
   } catch (e) {
     console.error("Fetch approved products error", e);
+    return [];
+  }
+};
+
+export const getProductCatalogAPI = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/products/catalog`);
+    const data = await parseJsonResponse(response);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error("Fetch product catalog error", e);
     return [];
   }
 };
@@ -287,7 +307,7 @@ export const approveProductAPI = async (productId) => {
     const response = await fetch(`${BASE_URL}/admin/products/${productId}/approve`, {
       method: "POST",
     });
-    return await response.json();
+    return await parseJsonResponse(response);
   } catch (e) {
     console.error("Approve product error", e);
     return { success: false };
@@ -299,7 +319,7 @@ export const rejectProductAPI = async (productId) => {
     const response = await fetch(`${BASE_URL}/admin/products/${productId}/reject`, {
       method: "POST",
     });
-    return await response.json();
+    return await parseJsonResponse(response);
   } catch (e) {
     console.error("Reject product error", e);
     return { success: false };
@@ -309,7 +329,7 @@ export const rejectProductAPI = async (productId) => {
 export const getSellerProductsAPI = async (sellerId) => {
   try {
     const response = await fetch(`${BASE_URL}/seller/products/${sellerId}`);
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     return Array.isArray(data) ? data.map(formatProduct) : [];
   } catch (error) {
     console.error("Fetch seller products error", error);

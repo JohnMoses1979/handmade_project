@@ -1,7 +1,7 @@
 
 // src/screens/admin/AdminDashboardScreen.js
 
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -42,48 +42,103 @@ export default function AdminDashboardScreen({
 }) {
   const {
     reloadAdminNotifications,
-    unreadAdminNotifications = 0,
+    reloadAdminOrders,
+    reloadComplaints,
+    reloadSellers,
     pendingSellers = [],
     approvedSellers = [],
     sellerProducts = [],
     commissionRecords = [],
     unreadComplaints = 0,
+    unreadAdminNotifications = 0,
     totalAdminCommission = 0,
     orders = [],
-    reloadAdminOrders,
-    reloadComplaints,
-    reloadSellers,
   } = useShop();
 
-  useEffect(() => {
-    reloadAdminOrders?.();
-    reloadComplaints?.();
-    reloadSellers?.();
-  }, [reloadAdminOrders, reloadComplaints, reloadSellers]);
+  const [dashboardSnapshot, setDashboardSnapshot] = useState(() => ({
+    orders,
+    pendingSellers,
+    approvedSellers,
+    sellerProducts,
+    commissionRecords,
+    unreadComplaints,
+    unreadAdminNotifications,
+    totalAdminCommission,
+  }));
+  const dashboardSnapshotRef = useRef(dashboardSnapshot);
+
+  dashboardSnapshotRef.current = {
+    orders,
+    pendingSellers,
+    approvedSellers,
+    sellerProducts,
+    commissionRecords,
+    unreadComplaints,
+    unreadAdminNotifications,
+    totalAdminCommission,
+  };
 
   useFocusEffect(
     useCallback(() => {
-      reloadAdminOrders?.();
-      reloadComplaints?.();
-      reloadSellers?.();
-      reloadAdminNotifications?.();
-    }, [reloadAdminOrders, reloadComplaints, reloadSellers, reloadAdminNotifications])
+      let active = true;
+
+      const refreshAdminSnapshot = async () => {
+        await Promise.all([
+          reloadAdminOrders?.(),
+          reloadComplaints?.(),
+          reloadSellers?.(),
+          reloadAdminNotifications?.(),
+        ]);
+
+        if (!active) return;
+
+        setDashboardSnapshot(dashboardSnapshotRef.current);
+      };
+
+      refreshAdminSnapshot();
+
+      return () => {
+        active = false;
+      };
+    }, [
+      reloadAdminOrders,
+      reloadComplaints,
+      reloadSellers,
+      reloadAdminNotifications,
+    ])
   );
 
+  const dashboardOrders = Array.isArray(dashboardSnapshot.orders) ? dashboardSnapshot.orders : [];
+  const dashboardPendingSellers = Array.isArray(dashboardSnapshot.pendingSellers)
+    ? dashboardSnapshot.pendingSellers
+    : [];
+  const dashboardApprovedSellers = Array.isArray(dashboardSnapshot.approvedSellers)
+    ? dashboardSnapshot.approvedSellers
+    : [];
+  const dashboardSellerProducts = Array.isArray(dashboardSnapshot.sellerProducts)
+    ? dashboardSnapshot.sellerProducts
+    : [];
+  const dashboardCommissionRecords = Array.isArray(dashboardSnapshot.commissionRecords)
+    ? dashboardSnapshot.commissionRecords
+    : [];
+  const dashboardUnreadComplaints = Number(dashboardSnapshot.unreadComplaints ?? 0);
+  const dashboardUnreadAdminNotifications = Number(dashboardSnapshot.unreadAdminNotifications ?? 0);
+  const dashboardTotalAdminCommission = Number(dashboardSnapshot.totalAdminCommission ?? 0);
+
   const totalProducts =
-    sellerProducts.length;
+    dashboardSellerProducts.length;
 
   const totalOrders =
-    orders.length;
+    dashboardOrders.length;
 
   const totalComplaints =
-    unreadComplaints;
+    dashboardUnreadComplaints;
 
   const bellCount =
-    unreadAdminNotifications + unreadComplaints;
+    dashboardUnreadAdminNotifications + dashboardUnreadComplaints;
 
   const pendingSellerCount =
-    pendingSellers.length;
+    dashboardPendingSellers.length;
 
   const salesGraph = useMemo(() => {
     const totals = Array(7).fill(0);
@@ -93,7 +148,7 @@ export default function AdminDashboardScreen({
     weekStart.setHours(0, 0, 0, 0);
     weekStart.setDate(now.getDate() - currentWeekday);
 
-    orders.forEach((order) => {
+    dashboardOrders.forEach((order) => {
       const createdAt = new Date(order.createdAt);
       if (Number.isNaN(createdAt.getTime()) || createdAt < weekStart) return;
       const index = (createdAt.getDay() + 6) % 7;
@@ -101,14 +156,14 @@ export default function AdminDashboardScreen({
     });
 
     return totals;
-  }, [orders]);
+  }, [dashboardOrders]);
 
   const maxGraph = useMemo(
     () => Math.max(...salesGraph, 1),
     [salesGraph]
   );
 
-  const sellerTotal = approvedSellers.length + pendingSellers.length || 1;
+  const sellerTotal = dashboardApprovedSellers.length + dashboardPendingSellers.length || 1;
   const statusTotal = Math.max(sellerTotal, totalComplaints, 1);
 
   const goTo = (screen, params) => {
@@ -192,13 +247,13 @@ export default function AdminDashboardScreen({
 
             <Text style={styles.heroAmount}>
               ₹
-              {totalAdminCommission >
+              {dashboardTotalAdminCommission >
               1000
                 ? (
-                    totalAdminCommission /
+                    dashboardTotalAdminCommission /
                     1000
                   ).toFixed(1) + "K"
-                : totalAdminCommission}
+                : dashboardTotalAdminCommission}
             </Text>
 
             <Text style={styles.heroGrowth}>
@@ -241,7 +296,7 @@ export default function AdminDashboardScreen({
           <SummaryCard
             label="Sellers"
             value={
-              approvedSellers.length
+              dashboardApprovedSellers.length
             }
             icon="storefront-outline"
             color={C.green}
@@ -461,7 +516,7 @@ export default function AdminDashboardScreen({
             </TouchableOpacity>
           </View>
 
-          {commissionRecords.length ===
+          {dashboardCommissionRecords.length ===
           0 ? (
             <View
               style={
@@ -483,7 +538,7 @@ export default function AdminDashboardScreen({
               </Text>
             </View>
           ) : (
-            commissionRecords
+            dashboardCommissionRecords
               .slice(0, 5)
               .map((item) => (
                 <View
@@ -580,10 +635,10 @@ export default function AdminDashboardScreen({
           <ProgressItem
             label="Approved Sellers"
             value={
-              approvedSellers.length
+              dashboardApprovedSellers.length
             }
             color={C.green}
-            width={`${Math.min((approvedSellers.length / statusTotal) * 100, 100)}%`}
+            width={`${Math.min((dashboardApprovedSellers.length / statusTotal) * 100, 100)}%`}
           />
 
           <ProgressItem
@@ -853,7 +908,7 @@ const styles = StyleSheet.create({
   },
 
   summaryCard: {
-    width: (width - 44) / 2,
+    width: (width - 42) / 2,
     backgroundColor: C.card,
     borderRadius: 24,
     padding: 18,

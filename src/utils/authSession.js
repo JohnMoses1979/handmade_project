@@ -1,8 +1,10 @@
 let memorySession = null;
 let memoryCustomerAccount = null;
+let memoryCustomerOnboardingSeen = false;
 
 const STORAGE_KEY = "selfbusiness_auth_session";
 const CUSTOMER_ACCOUNT_KEY = "selfbusiness_customer_account";
+const CUSTOMER_ONBOARDING_KEY = "selfbusiness_customer_onboarding_seen";
 
 function hasLocalStorage() {
   return typeof globalThis !== "undefined" && !!globalThis.localStorage;
@@ -78,6 +80,42 @@ export function clearCustomerAccount() {
       globalThis.localStorage.removeItem(CUSTOMER_ACCOUNT_KEY);
     } catch (error) {
       console.error("clearCustomerAccount error:", error);
+    }
+  }
+}
+
+export function hasSeenCustomerOnboarding() {
+  if (hasLocalStorage()) {
+    try {
+      return globalThis.localStorage.getItem(CUSTOMER_ONBOARDING_KEY) === "true";
+    } catch (error) {
+      console.error("hasSeenCustomerOnboarding error:", error);
+    }
+  }
+
+  return memoryCustomerOnboardingSeen;
+}
+
+export function markCustomerOnboardingSeen() {
+  memoryCustomerOnboardingSeen = true;
+
+  if (hasLocalStorage()) {
+    try {
+      globalThis.localStorage.setItem(CUSTOMER_ONBOARDING_KEY, "true");
+    } catch (error) {
+      console.error("markCustomerOnboardingSeen error:", error);
+    }
+  }
+}
+
+export function clearCustomerOnboardingSeen() {
+  memoryCustomerOnboardingSeen = false;
+
+  if (hasLocalStorage()) {
+    try {
+      globalThis.localStorage.removeItem(CUSTOMER_ONBOARDING_KEY);
+    } catch (error) {
+      console.error("clearCustomerOnboardingSeen error:", error);
     }
   }
 }

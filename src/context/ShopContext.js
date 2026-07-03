@@ -29,6 +29,7 @@ import {
   addProductAPI,
   getAllProductsAPI,
   getApprovedProductsAPI,
+  getProductCatalogAPI,
   approveProductAPI,
   rejectProductAPI,
   getSellerProductsAPI,
@@ -41,18 +42,22 @@ import {
   addDeliveryPartnerAPI,
   assignDeliveryPersonAPI,
   createCustomerOrderAPI,
+  createReturnRequestAPI,
   deleteCustomerAddressAPI,
   getDeliveryPartnersAPI,
   getAdminOrdersAPI,
   getAllReviewsAPI,
   getCustomerAddressesAPI,
   getCustomerOrdersAPI,
+  getCustomerReturnRequestsAPI,
   getCustomerWishlistAPI,
   getSellerOrdersAPI,
+  getSellerReturnRequestsAPI,
   removeWishlistItemAPI,
   saveCustomerAddressAPI,
   updateDeliveryStatusAPI,
   updateOrderStatusAPI,
+  updateReturnStatusAPI,
   setDefaultCustomerAddressAPI,
 } from "../api/commerceApi";
 import {
@@ -77,6 +82,11 @@ import {
   setAuthSession,
   setCustomerAccount,
 } from "../utils/authSession";
+import {
+  buildCategoryCatalogFromEntries,
+  buildCategoryCatalogFromProducts,
+} from "../utils/categoryCatalog";
+import { SERVER_URL } from "../api/config";
 
 const ShopContext = createContext(null);
 
@@ -99,9 +109,20 @@ const getDiscountedPrice = (price, discount = 0) => {
 
 const resolveImageUri = (image) => {
   if (!image) return null;
-  if (typeof image === "string") return image;
+  if (typeof image === "string") {
+    if (image.includes("/uploads/documents/")) {
+      const fileName = image.split("/").pop();
+      return fileName ? `${SERVER_URL}/uploads/${encodeURIComponent(fileName)}` : image;
+    }
+    return image;
+  }
   if (typeof image === "object") {
-    return image.uri || image.url || image.path || null;
+    const value = image.uri || image.url || image.path || null;
+    if (typeof value === "string" && value.includes("/uploads/documents/")) {
+      const fileName = value.split("/").pop();
+      return fileName ? `${SERVER_URL}/uploads/${encodeURIComponent(fileName)}` : value;
+    }
+    return value;
   }
   return null;
 };
@@ -370,6 +391,7 @@ export function ShopProvider({ children }) {
   const [productReviews, setProductReviews] = useState({});
   const [sellerProducts, setSellerProducts] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
+  const [productCatalog, setProductCatalog] = useState([]);
   const [deliveryPartners, setDeliveryPartners] = useState(initialDeliveryPartners);
   const [returnRequests, setReturnRequests] = useState([]);
   const [customerWallet, setCustomerWallet] = useState(0);
@@ -451,16 +473,19 @@ export function ShopProvider({ children }) {
     setCurrentCustomer(customer);
     if (!customer.email) {
       setWishlistItems([]);
+      setReturnRequests([]);
       return [];
     }
 
-    const [wishlist, customerOrders] = await Promise.all([
+    const [wishlist, customerOrders, customerReturns] = await Promise.all([
       getCustomerWishlistAPI(customer.email),
       getCustomerOrdersAPI(customer.email),
+      getCustomerReturnRequestsAPI(customer.email),
     ]);
 
     setWishlistItems(Array.isArray(wishlist) ? wishlist : []);
     setOrders(Array.isArray(customerOrders) ? customerOrders : []);
+    setReturnRequests(Array.isArray(customerReturns) ? customerReturns : []);
     return customerOrders;
   }, []);
 
@@ -490,6 +515,17 @@ export function ShopProvider({ children }) {
     return sellerOrders;
   }, [currentSeller]);
 
+  const reloadSellerReturnRequests = useCallback(async (sellerIdArg) => {
+    const sellerId = String(sellerIdArg ?? currentSeller?.id ?? "").trim();
+    if (!sellerId || !isServerSellerId(sellerId)) {
+      return [];
+    }
+
+    const sellerReturns = await getSellerReturnRequestsAPI(sellerId);
+    setReturnRequests(Array.isArray(sellerReturns) ? sellerReturns : []);
+    return sellerReturns;
+  }, [currentSeller]);
+
   const reloadAdminOrders = useCallback(async () => {
     const adminOrders = await getAdminOrdersAPI();
     setOrders(Array.isArray(adminOrders) ? adminOrders : []);
@@ -498,9 +534,10 @@ export function ShopProvider({ children }) {
 
   const reloadProductsWithReviews = useCallback(async () => {
     try {
-      const [products, reviews] = await Promise.all([
+      const [products, reviews, catalog] = await Promise.all([
         getAllProductsAPI(),
         getAllReviewsAPI(),
+        getProductCatalogAPI(),
       ]);
 
       const reviewsByProduct = buildReviewMap(Array.isArray(reviews) ? reviews : []);
@@ -513,6 +550,7 @@ export function ShopProvider({ children }) {
       setProductReviews(reviewsByProduct);
       setPendingProducts(nextPending);
       setSellerProducts(nextSellerProducts);
+      setProductCatalog(Array.isArray(catalog) ? catalog : []);
     } catch (error) {
       console.error("Failed to reload products and reviews:", error);
     }
@@ -716,6 +754,7 @@ export function ShopProvider({ children }) {
   useEffect(() => {
     if (currentSeller?.id && isServerSellerId(currentSeller.id)) {
       reloadSellerOrders(currentSeller.id);
+      reloadSellerReturnRequests(currentSeller.id);
       reloadSellerNotifications(currentSeller.id);
       reloadDeliveryPartners(currentSeller.id);
       reloadCurrentSellerProducts(currentSeller.id);
@@ -723,7 +762,7 @@ export function ShopProvider({ children }) {
       reloadSellerProfile(currentSeller.id);
       reloadSellerSettings(currentSeller.id);
     }
-  }, [currentSeller, reloadSellerOrders, reloadSellerNotifications, reloadDeliveryPartners, reloadCurrentSellerProducts, reloadComplaints, reloadSellerProfile, reloadSellerSettings]);
+  }, [currentSeller, reloadSellerOrders, reloadSellerReturnRequests, reloadSellerNotifications, reloadDeliveryPartners, reloadCurrentSellerProducts, reloadComplaints, reloadSellerProfile, reloadSellerSettings]);
 
   useEffect(() => {
     reloadAdminNotifications();
@@ -2156,6 +2195,7 @@ export function ShopProvider({ children }) {
   const updateOrderStatus = useCallback(
     (orderId, status) => {
       const matchingOrder = orders.find((order) => String(order.id) === String(orderId));
+      const isCancelled = String(status).toLowerCase() === "cancelled";
       setOrders((prev) =>
         prev.map((order) =>
           String(order.id) === String(orderId) ? { ...order, status } : order
@@ -2163,8 +2203,10 @@ export function ShopProvider({ children }) {
       );
       addSellerNotification(
         "Order status updated",
-        `${orderId} status changed to ${status}.`,
-        "order"
+        isCancelled
+          ? `Order ${orderId} was cancelled by the customer.`
+          : `${orderId} status changed to ${status}.`,
+        isCancelled ? "warning" : "order"
       );
       addCustomerNotification(
         "Order Update",
@@ -2299,7 +2341,7 @@ export function ShopProvider({ children }) {
 
   // ─── Returns ───────────────────────────────────────────────────────────────
   const createReturnRequest = useCallback(
-    ({
+    async ({
       orderId,
       customer,
       customerEmail,
@@ -2352,6 +2394,18 @@ export function ShopProvider({ children }) {
         creditedOn: null,
       };
 
+      const result = await createReturnRequestAPI({
+        ...request,
+        sellerName: request.sellerName,
+        refundAmount: request.refundAmount,
+        refundAmountText: request.refundAmountText,
+      });
+      if (!result?.success) {
+        throw new Error(result?.message || "Unable to create return request.");
+      }
+
+      const savedRequest = result.request || request;
+
       setReturnRequests((prev) => {
         const alreadyExists = prev.some(
           (item) =>
@@ -2359,19 +2413,19 @@ export function ShopProvider({ children }) {
             String(item.productId ?? item.product) === String(productId ?? product)
         );
         if (alreadyExists) return prev;
-        return [request, ...prev];
+        return [savedRequest, ...prev];
       });
 
       setOrders((prev) =>
         prev.map((order) => {
           if (String(order.id) !== String(orderId)) return order;
-          return { ...order, returns: { ...(order.returns ?? {}), [key]: request } };
+          return { ...order, returns: { ...(order.returns ?? {}), [key]: savedRequest } };
         })
       );
 
       addSellerNotification(
         "Return requested",
-        `${request.customer} requested return for ${request.product}.`,
+        `${savedRequest.customer} requested return for ${savedRequest.product}.`,
         "return",
         {
           sellerId: resolvedSellerId,
@@ -2381,7 +2435,7 @@ export function ShopProvider({ children }) {
       );
       addCustomerNotification(
         "Return Requested",
-        `Your return for ${request.product} was sent to the seller.`,
+        `Your return for ${savedRequest.product} was sent to the seller.`,
         "return",
         {
           relatedId: orderId,
@@ -2389,7 +2443,7 @@ export function ShopProvider({ children }) {
         }
       );
 
-      return request;
+      return savedRequest;
     },
     [addSellerNotification, addCustomerNotification, orders]
   );
@@ -2399,7 +2453,9 @@ export function ShopProvider({ children }) {
       const existingRequest = returnRequests.find(
         (item) => String(item.id) === String(returnId)
       );
-      if (!existingRequest) return;
+      if (!existingRequest) {
+        return { success: false, message: "Return request not found" };
+      }
 
       let razorpayRefund = null;
       const shouldCreditRefund =
@@ -2423,28 +2479,28 @@ export function ShopProvider({ children }) {
         }
       }
 
-      const creditedRequest =
-        shouldCreditRefund
-          ? {
-              ...existingRequest,
-              status: "Product Received",
-              refundStatus: "Credited",
-              refundCredited: true,
-              refundMethod: "Razorpay",
-              razorpayRefundId: razorpayRefund?.refundId || `rfnd_${Date.now()}`,
-              creditedOn: "Today",
-            }
-          : null;
+      const backendPayload = shouldCreditRefund
+        ? {
+            status: "Product Received",
+            refundStatus: "Credited",
+            refundCredited: true,
+            refundMethod: "Razorpay",
+            razorpayRefundId: razorpayRefund?.refundId || `rfnd_${Date.now()}`,
+            creditedOn: "Today",
+          }
+        : { status };
+
+      const result = await updateReturnStatusAPI(existingRequest.id, backendPayload);
+      if (!result?.success) {
+        throw new Error(result?.message || "Unable to update return status.");
+      }
 
       const updatedRequest =
-        creditedRequest ||
-        (status === "Product Received"
-          ? {
-              ...existingRequest,
-              status: "Product Received",
-              refundStatus: "Credited",
-            }
-          : { ...existingRequest, status });
+        result.request ||
+        {
+          ...existingRequest,
+          ...backendPayload,
+        };
 
       setReturnRequests((prev) =>
         prev.map((item) =>
@@ -2486,52 +2542,52 @@ export function ShopProvider({ children }) {
         );
       }
 
-      if (status === "Product Received" && creditedRequest) {
+      if (status === "Product Received" && updatedRequest.refundCredited) {
         const amountFromGateway = Number(razorpayRefund?.amount ?? 0);
         const amount =
           amountFromGateway > 0
             ? amountFromGateway > 1000
               ? amountFromGateway / 100
               : amountFromGateway
-            : Number(creditedRequest.refundAmount ?? 0);
+            : Number(existingRequest.refundAmount ?? 0);
         setCustomerWallet((prev) => prev + amount);
         setRefundHistory((prev) => [
           {
             id: `RF${Date.now()}`,
-            returnId: creditedRequest.id,
-            orderId: creditedRequest.orderId,
-            sellerId: creditedRequest.sellerId,
-            sellerName: creditedRequest.sellerName,
-            product: creditedRequest.product,
-            customer: creditedRequest.customer,
+            returnId: updatedRequest.id,
+            orderId: updatedRequest.orderId,
+            sellerId: updatedRequest.sellerId,
+            sellerName: updatedRequest.sellerName,
+            product: updatedRequest.product,
+            customer: updatedRequest.customer,
             amount,
             amountText: formatPrice(amount),
             creditedOn: "Today",
             status: "Credited",
             method: "Razorpay",
-            razorpayRefundId: creditedRequest.razorpayRefundId,
+            razorpayRefundId: updatedRequest.razorpayRefundId,
           },
           ...prev,
         ]);
-        await reloadSellerPayoutSummary(creditedRequest.sellerId);
+        await reloadSellerPayoutSummary(updatedRequest.sellerId);
         addSellerNotification(
           "Refund credited",
           `${formatPrice(amount)} credited to customer via Razorpay after product received.`,
           "refund",
           {
-            relatedId: creditedRequest.orderId,
-            customerEmail: creditedRequest.customerEmail,
+            relatedId: updatedRequest.orderId,
+            customerEmail: updatedRequest.customerEmail,
           }
         );
         addCustomerNotification(
           "Refund Credited",
-          `${formatPrice(amount)} credited via Razorpay for ${creditedRequest.product}.`,
+          `${formatPrice(amount)} credited via Razorpay for ${updatedRequest.product}.`,
           "refund",
           {
-            relatedId: creditedRequest.orderId,
-            customerEmail: creditedRequest.customerEmail,
+            relatedId: updatedRequest.orderId,
+            customerEmail: updatedRequest.customerEmail,
             refundAmount: amount,
-            razorpayRefundId: creditedRequest.razorpayRefundId,
+            razorpayRefundId: updatedRequest.razorpayRefundId,
           }
         );
       }
@@ -2629,6 +2685,14 @@ export function ShopProvider({ children }) {
     () => sellerProducts.filter((item) => item.visibleToCustomer && item.active),
     [sellerProducts]
   );
+
+  const customerCategoryCatalog = useMemo(() => {
+    if (Array.isArray(productCatalog) && productCatalog.length > 0) {
+      return buildCategoryCatalogFromEntries(productCatalog);
+    }
+
+    return buildCategoryCatalogFromProducts(customerVisibleProducts);
+  }, [productCatalog, customerVisibleProducts]);
 
   const cartCount = useMemo(
     () => cartItems.reduce((total, item) => total + (item.qty ?? 1), 0),
@@ -2932,6 +2996,7 @@ export function ShopProvider({ children }) {
     pendingProducts,
     pendingSellerProducts: pendingProducts,
     customerVisibleProducts,
+    customerCategoryCatalog,
     deliveryPartners,
     returnRequests,
     customerWallet,

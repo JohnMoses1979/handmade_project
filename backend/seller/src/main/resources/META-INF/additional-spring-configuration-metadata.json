@@ -1,0 +1,59 @@
+{
+  "properties": [
+    {
+      "name": "app.mail.from",
+      "type": "java.lang.String",
+      "description": "Default from address for outgoing application emails."
+    },
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key used to sign JWT tokens."
+    },
+    {
+      "name": "jwt.expiration",
+      "type": "java.lang.Long",
+      "description": "JWT token validity in milliseconds."
+    },
+    {
+      "name": "file.upload.dir",
+      "type": "java.lang.String",
+      "description": "Base directory used to store uploaded files."
+    },
+    {
+      "name": "razorpay.key.id",
+      "type": "java.lang.String",
+      "description": "Razorpay key id for payment integration."
+    },
+    {
+      "name": "razorpay.key.secret",
+      "type": "java.lang.String",
+      "description": "Razorpay secret key for payment integration."
+    },
+    {
+      "name": "razorpay.currency",
+      "type": "java.lang.String",
+      "description": "Default Razorpay currency code."
+    },
+    {
+      "name": "razorpay.payout.account-number",
+      "type": "java.lang.String",
+      "description": "Payout account number for seller withdrawals."
+    },
+    {
+      "name": "groq.api.key",
+      "type": "java.lang.String",
+      "description": "Groq API key used by the AI chat service."
+    },
+    {
+      "name": "groq.chat.model",
+      "type": "java.lang.String",
+      "description": "Groq chat model name."
+    },
+    {
+      "name": "groq.transcription.model",
+      "type": "java.lang.String",
+      "description": "Groq transcription model name."
+    }
+  ]
+}

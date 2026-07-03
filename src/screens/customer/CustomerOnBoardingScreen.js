@@ -382,9 +382,14 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
-import { getCustomerAccount, setAuthSession } from "../../utils/authSession";
+import {
+  getAuthSession,
+  getCustomerAccount,
+  setAuthSession,
+} from "../../utils/authSession";
 import { Ionicons } from "@expo/vector-icons";
 import { useShop } from "../../context/ShopContext";
+import { markCustomerOnboardingSeenAPI } from "../../api/customerApi";
 
 const { width } = Dimensions.get("window");
 
@@ -426,23 +431,41 @@ export default function CustomerOnboardingScreen({ navigation }) {
 
   const handleGetStarted = () => {
     const customer = getCustomerAccount();
-    if (customer?.email) {
-      setAuthSession({
-        role: "customer",
-        email: customer.email,
-        phone: customer.phone ?? "",
-        name: customer.name ?? "",
-        location: customer.location ?? "",
-        bio: customer.bio ?? "",
-        avatar: customer.avatar ?? null,
+    const session = getAuthSession();
+    const email = customer?.email ?? session?.email ?? "";
+
+    if (email) {
+      markCustomerOnboardingSeenAPI(email).finally(() => {
+        setAuthSession({
+          role: "customer",
+          email: customer?.email ?? session?.email ?? "",
+          phone: customer?.phone ?? session?.phone ?? "",
+          name: customer?.name ?? session?.name ?? "",
+          location: customer?.location ?? session?.location ?? "",
+          bio: customer?.bio ?? session?.bio ?? "",
+          avatar: customer?.avatar ?? session?.avatar ?? null,
+        });
+        reloadCustomerCommerceData?.();
+        reloadCustomerAddresses?.();
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: "CustomerTabs",
+              params: {
+                screen: "HomeTab",
+                params: {
+                  screen: "CustomerHomeMain",
+                },
+              },
+            },
+          ],
+        });
       });
-      reloadCustomerCommerceData?.();
-      reloadCustomerAddresses?.();
-      navigation.replace("CustomerTabs", { screen: "ProfileTab" });
       return;
     }
 
-    navigation.replace("CustomerLoginScreen");
+    navigation.replace("CustomerLoginScreen", { role: "customer" });
   };
 
   return (

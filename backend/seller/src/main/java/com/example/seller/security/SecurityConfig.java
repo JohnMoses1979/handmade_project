@@ -1,3 +1,5 @@
+
+
 package com.example.seller.security;
 
 import org.springframework.context.annotation.Bean;
@@ -33,20 +35,100 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-
-                // Allow backend root test
-                .requestMatchers("/", "/health", "/error").permitAll()
-
-                // Allow preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                // Allow uploads
-                .requestMatchers("/uploads/**").permitAll()
-
-                // Allow all API routes for now
-                .requestMatchers("/api/**").permitAll()
-
-                // Any other route needs auth
+                .requestMatchers("/api/notifications/**").permitAll()
+                .requestMatchers(HttpMethod.POST,
+                    "/api/seller/register",
+                    "/api/seller/login",
+                    "/api/seller/forgot-password",
+                    "/api/seller/verify-otp",
+                    "/api/seller/reset-password",
+                    "/api/auth/admin/login",
+                    "/api/auth/customer/login",
+                    "/api/auth/customer/signup",
+                    "/api/auth/customer/sync-account",
+                    "/api/auth/customer/forgot-password",
+                    "/api/auth/customer/verify-otp",
+                    "/api/auth/customer/reset-password",
+                    "/api/auth/customer/mark-onboarding-seen",
+                    "/api/seller/profile/**",
+                    "/api/seller/settings/**",
+                    "/api/seller/support",
+                    "/api/seller/payouts/**",
+                    "/api/seller/products/add",
+                    "/api/seller/delivery-partners",
+                    "/api/complaints/**",
+                    "/api/ai/**",
+                    "/api/customer/addresses",
+                    "/api/customer/addresses/**",
+                    "/api/customer/**",
+                    "/api/seller/returns/**",
+                    "/api/returns/**",
+                    "/api/notifications/**",
+                    "/api/orders/**",
+                    "/api/reviews/**",
+                    "/api/payments/**",
+                    "/api/admin/**"
+                ).permitAll()
+                .requestMatchers(HttpMethod.GET,
+                    "/api/complaints/**",
+                    "/api/ai/**",
+                    "/api/customer/addresses",
+                    "/api/customer/addresses/**",
+                    "/api/seller/profile/**",
+                    "/api/seller/settings/**",
+                    "/api/seller/support",
+                    "/api/seller/payouts/**",
+                    "/api/products/**",
+                    "/api/customer/**",
+                    "/api/notifications/**",
+                    "/api/seller/orders",
+                    "/api/seller/delivery-partners",
+                    "/api/reviews/**",
+                    "/api/admin/**",
+                    "/uploads/**"
+                ).permitAll()
+                .requestMatchers(HttpMethod.DELETE,
+                    "/api/customer/addresses/**",
+                    "/api/customer/**"
+                    ,
+                    "/api/notifications/**"
+                ).permitAll()
+                .requestMatchers(
+                    "/api/seller/register",
+                    "/api/seller/login",
+                    "/api/seller/forgot-password",
+                    "/api/seller/verify-otp",
+                    "/api/seller/reset-password",
+                    "/api/auth/admin/login",
+                    "/api/auth/customer/login",
+                    "/api/auth/customer/signup",
+                    "/api/auth/customer/sync-account",
+                    "/api/auth/customer/forgot-password",
+                    "/api/auth/customer/verify-otp",
+                    "/api/auth/customer/reset-password",
+                    "/api/auth/customer/mark-onboarding-seen",
+                    "/api/seller/profile/**",
+                    "/api/seller/settings/**",
+                    "/api/seller/support",
+                    "/api/seller/payouts/**",
+                    "/api/seller/products/**",
+                    "/api/seller/delivery-partners",
+                    "/api/complaints/**",
+                    "/api/ai/**",
+                    "/api/customer/addresses",
+                    "/api/customer/addresses/**",
+                    "/api/customer/**",
+                    "/api/seller/returns/**",
+                    "/api/returns/**",
+                    "/api/notifications/**",
+                    "/api/orders/**",
+                    "/api/reviews/**",
+                    "/api/payments/**",
+                    "/api/products/**",
+                    "/api/admin/**",
+                    "/uploads/**"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -62,40 +144,23 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
         config.setAllowedOriginPatterns(List.of(
-            "http://16.112.231.38",
-            "http://16.112.231.38:*"
+            "http://localhost:*",
+            "https://localhost:*",
+            "http://127.0.0.1:*",
+            "http://192.168.*:*",
+            "http://10.*:*",
+            "https://*.exp.direct",
+            "https://*.expo.dev",
+            "https://*.expo.io"
         ));
-
-        config.setAllowedMethods(List.of(
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "PATCH",
-            "OPTIONS"
-        ));
-
-        config.setAllowedHeaders(List.of(
-            "Authorization",
-            "Content-Type",
-            "Accept",
-            "Origin",
-            "X-Requested-With"
-        ));
-
-        config.setExposedHeaders(List.of(
-            "Authorization",
-            "Content-Type"
-        ));
-
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(false);
         config.setMaxAge(3600L);
-
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 }

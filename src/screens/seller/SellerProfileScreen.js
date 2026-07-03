@@ -344,6 +344,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useShop } from "../../context/ShopContext";
+import { clearAuthSession } from "../../utils/authSession";
 
 const C = {
   primary: "#082843",
@@ -385,7 +386,7 @@ const MENU_ROWS = [
 ];
 
 export default function SellerProfileScreen({ navigation }) {
-  const { currentSeller, sellerStats } = useShop();
+  const { currentSeller, sellerStats, logoutSeller } = useShop();
 
   const seller = currentSeller || {
     name: "Priya Sharma",
@@ -397,6 +398,15 @@ export default function SellerProfileScreen({ navigation }) {
   const initials = seller.name
     ? seller.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "PS";
+
+  const handleLogout = () => {
+    clearAuthSession();
+    logoutSeller?.();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "SellerLoginScreen" }],
+    });
+  };
 
   return (
     <View style={styles.root}>
@@ -498,7 +508,7 @@ export default function SellerProfileScreen({ navigation }) {
         {/* ── Logout ── */}
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={() => navigation.replace("RoleSelectionScreen")}
+          onPress={handleLogout}
           activeOpacity={0.85}
         >
           <Ionicons name="log-out-outline" size={20} color={C.danger} />
